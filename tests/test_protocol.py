@@ -27,3 +27,24 @@ class TestEncodeMessage:
         """None payload should be serialized as null."""
         obj = json.loads(encode_message("PING").strip())
         assert obj["payload"] is None
+
+
+class TestDecodeMessage:
+    """Tests for decode_message."""
+
+    def test_round_trip(self):
+        """Encoding then decoding should recover original type and payload."""
+        encoded = encode_message(MSG_THROW, {"card": "7"})
+        msg_type, payload = decode_message(encoded.decode().strip())
+        assert msg_type == MSG_THROW
+        assert payload == {"card": "7"}
+
+    def test_invalid_json_raises(self):
+        """Invalid JSON should raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid JSON"):
+            decode_message("not-json")
+
+    def test_missing_type_raises(self):
+        """Message without 'type' key should raise ValueError."""
+        with pytest.raises(ValueError):
+            decode_message(json.dumps({"payload": "x"}))
