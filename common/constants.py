@@ -47,3 +47,7 @@ ATTACK_ORDER: tuple = (ROLE_SERVANT, ROLE_QUEEN, ROLE_ACE, ROLE_KING)
 
 # King blind-swap privilege limit per game session
 KING_SWAP_LIMIT: int = 1
+
+# Protocol message types
+MSG_THROW: str = "THROW"
+MSG_ERROR: str = "ERROR"
