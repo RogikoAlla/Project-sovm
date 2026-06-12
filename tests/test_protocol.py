@@ -48,3 +48,32 @@ class TestDecodeMessage:
         """Message without 'type' key should raise ValueError."""
         with pytest.raises(ValueError):
             decode_message(json.dumps({"payload": "x"}))
+
+
+class TestSplitFrames:
+    """Tests for split_frames buffer handling."""
+
+    def test_single_complete_frame(self):
+        """A buffer with one newline should yield one frame."""
+        frames, remainder = split_frames('{"type":"PING","payload":null}\n')
+        assert len(frames) == 1
+        assert remainder == ""
+
+    def test_partial_frame_held(self):
+        """Incomplete last frame should be returned as remainder."""
+        frames, remainder = split_frames('{"type":"PING","payload":null}\n{"partial"')
+        assert len(frames) == 1
+        assert remainder == '{"partial"'
+
+    def test_multiple_frames(self):
+        """Buffer with multiple newlines should yield multiple frames."""
+        frames, remainder = split_frames("A\nB\nC\n")
+        assert frames == ["A", "B", "C"]
+        assert remainder == ""
+
+    def test_empty_buffer(self):
+        """Empty buffer should yield no frames and empty remainder."""
+        frames, remainder = split_frames("")
+        assert frames == []
+        assert remainder == ""
+
