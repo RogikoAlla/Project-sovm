@@ -1,9 +1,9 @@
-"""Unit tests for common.models: Card."""
+"""Unit tests for common.models: Card, build_deck, PlayerInfo, GameState."""
 
 import pytest
 
-from common.constants import DECK_36
-from common.models import Card
+from common.constants import DECK_36, DECK_52, SUITS
+from common.models import Card, GameState, PlayerInfo, build_deck
 
 
 class TestCard:
@@ -59,3 +59,79 @@ class TestCard:
         card = Card("7", "clubs")
         with pytest.raises(Exception):
             card.rank = "8"  # type: ignore
+
+
+class TestBuildDeck:
+    """Tests for the deck builder."""
+
+    def test_deck_36_length(self):
+        """36-card deck should contain exactly 36 cards."""
+        assert len(build_deck(DECK_36)) == 36
+
+    def test_deck_52_length(self):
+        """52-card deck should contain exactly 52 cards."""
+        assert len(build_deck(DECK_52)) == 52
+
+    def test_deck_unique_cards(self):
+        """All cards in the deck should be unique."""
+        deck = build_deck(DECK_36)
+        assert len(set(deck)) == len(deck)
+
+    def test_deck_contains_king_of_spades(self):
+        """Deck should always contain the King of Spades."""
+        deck = build_deck(DECK_36)
+        assert any(c.is_king_of_spades for c in deck)
+
+    def test_deck_all_suits_represented(self):
+        """All four suits should appear in the deck."""
+        deck = build_deck(DECK_36)
+        assert {c.suit for c in deck} == set(SUITS)
+
+
+class TestPlayerInfo:
+    """Tests for PlayerInfo serialization."""
+
+    def test_roundtrip(self):
+        """PlayerInfo should serialize and deserialize without data loss."""
+        p = PlayerInfo(player_id=2, name="Alice", role="King", hand_size=9, is_active=True)
+        assert PlayerInfo.from_dict(p.to_dict()) == p
+
+    def test_defaults(self):
+        """PlayerInfo defaults should reflect inactive/unassigned state."""
+        p = PlayerInfo(player_id=0, name="Bob")
+        assert p.role is None
+        assert p.hand_size == 0
+
+
+class TestGameState:
+    """Tests for GameState serialization."""
+
+    def _sample_state(self):
+        """Return a minimal valid GameState."""
+        players = [
+            PlayerInfo(i, f"P{i}", role=r)
+            for i, r in enumerate(["King", "Ace", "Queen", "Servant"])
+        ]
+        return GameState(
+            players=players,
+            your_hand=[Card("A", "spades"), Card("6", "hearts")],
+            trump_suit="hearts",
+            deck_size=36,
+        )
+
+    def test_roundtrip(self):
+        """GameState to_dict/from_dict roundtrip should preserve all fields."""
+        state = self._sample_state()
+        restored = GameState.from_dict(state.to_dict())
+        assert restored.trump_suit == state.trump_suit
+        assert len(restored.your_hand) == len(state.your_hand)
+        assert len(restored.players) == len(state.players)
+
+    def test_table_cards_serialized(self):
+        """Table attack and defense cards should survive serialization."""
+        state = self._sample_state()
+        state.table_attack = [Card("K", "clubs")]
+        state.table_defense = {"0": Card("A", "clubs")}
+        restored = GameState.from_dict(state.to_dict())
+        assert len(restored.table_attack) == 1
+        assert "0" in restored.table_defense
