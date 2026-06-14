@@ -1,2 +1,12 @@
+# Legacy project — local reference only, do not commit
+old_repo/
 # Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.coverage
+htmlcov/
+.pytest_cache/
+.venv/
+venv/
