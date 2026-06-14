@@ -12,11 +12,15 @@ from common.constants import (
     MSG_JOIN,
     MSG_GAME_STATE,
     MSG_PLAY_CARD,
+    MSG_SWAP_DECK,
+    MSG_DONE,
     PLAYER_COUNT
 )
 from common.protocol import decode_message, encode_message, split_frames
 
 logger = logging.getLogger(__name__)
+
+TURN_TIMEOUT = 60
 
 
 class ClientConnection:
@@ -230,3 +234,40 @@ class GameServer:
         )
         timer = await self._countdown("Старт раунда", 10)
         await timer
+
+
+    # ------------------------------------------------------------------
+    # Phase 1: King's blind swap
+    # ------------------------------------------------------------------
+
+    async def _phase_king_swap(self) -> None:
+        """Offer the King a one-time blind hand swap (30s)."""
+        assert self.engine is not None
+        king_conn = self._conn_by_role(ROLE_KING)
+        if king_conn is None:
+            return
+
+        # State message intentionally has no trump yet (not declared).
+        await self._broadcast_state(
+            f"Король {king_conn.name} решает: поменять руку вслепую? (60 сек)"
+        )
+        await king_conn.send(MSG_PLAY_CARD, {"action": "swap_offer"})
+
+        timer = await self._countdown(f"Король {king_conn.name}: обмен рукой", TURN_TIMEOUT)
+        msg = await king_conn.recv_timeout(TURN_TIMEOUT)
+        timer.cancel()
+
+        if msg and msg[0] == MSG_SWAP_DECK:
+            target_id = int((msg[1] or {}).get("target_id", -1))
+            ok, err = self.engine.king_blind_swap(king_conn.player_id, target_id)
+            if ok:
+                target = self._conn_by_id(target_id)
+                tname = target.name if target else str(target_id)
+                # Everyone sees who swapped with whom.
+                await self._broadcast_state(
+                    f"Король {king_conn.name} поменялся руками с {tname} (вслепую)!"
+                )
+            else:
+                await self._broadcast_state(f"Обмен не состоялся: {err}")
+        else:
+            await self._broadcast_state(f"Король {king_conn.name} не стал меняться.")
