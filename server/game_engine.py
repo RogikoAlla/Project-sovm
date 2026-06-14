@@ -14,6 +14,7 @@ from common.constants import (
     ROLE_QUEEN,
     ROLE_SERVANT,
     ROLES_CCW,
+    SUITS,
 )
 from common.models import Card, PlayerInfo, build_deck
 
@@ -107,6 +108,13 @@ class GameEngine:
                 self.attacker_idx = i
             if p.player_id == defender_id:
                 self.defender_idx = i
+
+    def declare_trump(self, suit: str) -> bool:
+        """King declares the trump suit."""
+        if suit not in SUITS:
+            return False
+        self.trump_suit = suit
+        return True
 
     def end_round(self) -> None:
         """Advance the round counter and clear the table."""

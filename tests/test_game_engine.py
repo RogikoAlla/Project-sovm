@@ -46,3 +46,18 @@ class TestGameEngineDeal:
         engine.deal()
         roles_after = {p.player_id: p.role for p in engine.players}
         assert roles_before == roles_after
+
+
+class TestTrumpDeclaration:
+    """Tests for trump suit declaration."""
+
+    def test_valid_suit_accepted(self):
+        """Declaring a valid suit should return True."""
+        engine = _make_engine()
+        assert engine.declare_trump("hearts") is True
+        assert engine.trump_suit == "hearts"
+
+    def test_invalid_suit_rejected(self):
+        """Declaring an unknown suit should return False."""
+        engine = _make_engine()
+        assert engine.declare_trump("bananas") is False
