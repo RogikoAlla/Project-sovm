@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from typing import Optional
 
 from common.constants import (
     DEFAULT_HOST,
@@ -9,6 +10,8 @@ from common.constants import (
     DECK_36,
     ENCODING,
     MSG_JOIN,
+    MSG_GAME_STATE,
+    MSG_PLAY_CARD,
     PLAYER_COUNT
 )
 from common.protocol import decode_message, encode_message, split_frames
@@ -120,3 +123,69 @@ class GameServer:
 
             if len(self.connections) == PLAYER_COUNT:
                 asyncio.create_task(self._run_game())
+
+    # ------------------------------------------------------------------
+    # Broadcast helpers
+    # ------------------------------------------------------------------
+
+    async def _broadcast(self, msg_type: str, payload=None) -> None:
+        """Send a message to all connected clients."""
+        for conn in self.connections:
+            await conn.send(msg_type, payload)
+
+    async def _broadcast_state(self, message: str = "") -> None:
+        """Push a personalised game state to every client."""
+        assert self.engine is not None
+        for conn in self.connections:
+            state = self.engine.build_game_state(conn.player_id)
+            state.message = message
+            await conn.send(MSG_GAME_STATE, state.to_dict())
+
+    async def _countdown(self, label: str, seconds: int) -> asyncio.Task:
+        """Start a background task that broadcasts a per-second countdown.
+
+        Args:
+            label: Text shown next to the timer bar on clients.
+            seconds: Number of seconds to count down.
+
+        Returns:
+            The running task (cancel it as soon as input arrives).
+        """
+        async def _run() -> None:
+            for t in range(seconds, 0, -1):
+                await self._broadcast(MSG_PLAY_CARD, {
+                    "action": "timer",
+                    "label": label,
+                    "seconds_left": t,
+                })
+                await asyncio.sleep(1)
+
+        return asyncio.create_task(_run())
+
+    def _conn_by_role(self, role: str) -> Optional[ClientConnection]:
+        """Find the connection whose player currently holds *role*."""
+        assert self.engine is not None
+        for p in self.engine.players:
+            if p.role == role:
+                return self._conn_by_id(p.player_id)
+        return None
+
+    def _conn_by_id(self, pid: int) -> Optional[ClientConnection]:
+        """Find a connection by player ID."""
+        for conn in self.connections:
+            if conn.player_id == pid:
+                return conn
+        return None
+
+    def _player_by_role(self, role: str):
+        """Return the ServerPlayer currently holding *role* (or ``None``)."""
+        assert self.engine is not None
+        return next((p for p in self.engine.players if p.role == role), None)
+
+    @staticmethod
+    def _most_common_suit(hand) -> str:
+        """Return the suit with the most cards in *hand* (fallback trump)."""
+        counts: dict = {}
+        for card in hand:
+            counts[card.suit] = counts.get(card.suit, 0) + 1
+        return max(counts, key=lambda s: counts[s]) if counts else "spades"
