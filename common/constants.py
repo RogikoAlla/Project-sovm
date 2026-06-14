@@ -1,5 +1,12 @@
 """Game-wide constants for King and Servant."""
 
+# Network
+DEFAULT_HOST: str = "127.0.0.1"
+DEFAULT_PORT: int = 65432
+BUFFER_SIZE: int = 4096
+ENCODING: str = "utf-8"
+MSG_SEPARATOR: str = "\n"
+
 # Deck sizes
 DECK_36: int = 36
 DECK_52: int = 52
@@ -38,5 +45,21 @@ ROLES_CCW: tuple = (ROLE_KING, ROLE_ACE, ROLE_QUEEN, ROLE_SERVANT)
 # Clockwise attack order
 ATTACK_ORDER: tuple = (ROLE_SERVANT, ROLE_QUEEN, ROLE_ACE, ROLE_KING)
 
-# King blind-swap privilege limit per round
+# King blind-swap privilege limit per game session
 KING_SWAP_LIMIT: int = 1
+
+# Protocol message types
+MSG_THROW: str = "THROW"
+MSG_ERROR: str = "ERROR"
+MSG_JOIN: str = "JOIN"
+MSG_GAME_STATE: str = "GAME_STATE"
+MSG_PLAY_CARD: str = "PLAY_CARD"
+MSG_ROUND_END: str = "ROUND_END"
+MSG_GAME_END: str = "GAME_END"
+MSG_SWAP_DECK: str = "SWAP_DECK"
+MSG_DONE: str = "DONE"
+MSG_DECLARE_TRUMP: str = "DECLARE_TRUMP"
+MSG_BEAT: str = "BEAT"
+MSG_TAKE: str = "TAKE"
+MSG_START: str = "START"
+
