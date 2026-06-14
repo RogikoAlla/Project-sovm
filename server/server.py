@@ -368,3 +368,89 @@ class GameServer:
                     atk_pos = active_roles.index(def_role)
                 else:
                     atk_pos = (atk_pos + 1) % len(active_roles)
+
+    async def _run_exchange(self, atk_role: str, def_role: str) -> str:
+        """Run a single attacker→defender exchange (full Durak rules).
+
+        Args:
+            atk_role: Role of the attacker for this exchange.
+            def_role: Role of the defender for this exchange.
+
+        Returns:
+            ``'beat'`` (defender survived), ``'took'`` (defender picked up),
+            or ``'skip'`` (no playable attacker/defender or attacker passed).
+        """
+        assert self.engine is not None
+        atk_player = self._player_by_role(atk_role)
+        def_player = self._player_by_role(def_role)
+        atk_conn = self._conn_by_role(atk_role)
+        def_conn = self._conn_by_role(def_role)
+
+        if not (atk_player and atk_player.hand and def_player and def_player.hand
+                and atk_conn is not None and def_conn is not None):
+            return "skip"
+
+        self.engine.set_attacker_defender(atk_player.player_id, def_player.player_id)
+
+        # Initial attack — the attacker may decline (pass) on an empty table.
+        if await self._prompt_attack(atk_conn, def_conn, atk_role, def_role, True) != "played":
+            return "skip"
+
+        while True:
+            # Defender beats everything or takes.
+            if await self._defender_turn(def_conn) == "took":
+                return "took"
+
+            if self.engine.is_round_over():
+                self.engine.defender_done()
+                return "beat"
+
+            # All current cards are beaten — attacker may подкинуть or бито.
+            more = await self._prompt_attack(atk_conn, def_conn, atk_role, def_role, False)
+            if more != "played":
+                ok, _ = self.engine.defender_done()
+                await self._broadcast_state(f"{atk_conn.name} объявил БИТО. Стол очищен.")
+                return "beat"
+            # Otherwise loop: the defender must now beat the newly added cards.
+
+    async def _prompt_attack(
+        self, atk_conn: ClientConnection, def_conn: ClientConnection,
+        atk_role: str, def_role: str, initial: bool,
+    ) -> str:
+        """Prompt the attacker to play/add cards, re-prompting on invalid input.
+
+        Args:
+            atk_conn: Attacker connection.
+            def_conn: Defender connection.
+            atk_role: Attacker's role label.
+            def_role: Defender's role label.
+            initial: ``True`` for the opening attack, ``False`` for подкидывание.
+
+        Returns:
+            ``'played'`` if cards were placed, else ``'done'`` (pass / бито).
+        """
+        assert self.engine is not None
+        while True:
+            if initial:
+                label = f"Атака: {atk_conn.name} ({atk_role}) → {def_conn.name} ({def_role})"
+            else:
+                label = f"{atk_conn.name}: можно подкинуть карты тех же рангов или объявить бито"
+            await self._broadcast_state(label)
+            await atk_conn.send(MSG_PLAY_CARD, {"action": "attack", "initial": initial})
+
+            timer = await self._countdown(f"Ход: {atk_conn.name}", TURN_TIMEOUT)
+            msg = await atk_conn.recv_timeout(TURN_TIMEOUT)
+            timer.cancel()
+
+            if msg is None or msg[0] == MSG_DONE:
+                return "done"
+            if msg[0] == MSG_THROW:
+                cards = [Card.from_dict(c) for c in (msg[1] or {}).get("cards", [])]
+                ok, err = self.engine.apply_attack_batch(atk_conn.player_id, cards)
+                if not ok:
+                    await atk_conn.send(MSG_ERROR, err)
+                    continue
+                shown = ", ".join(str(c) for c in cards)
+                await self._broadcast_state(f"{atk_conn.name} кладёт на стол: {shown}")
+                return "played"
+            return "done"
