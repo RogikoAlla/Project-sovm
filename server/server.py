@@ -14,6 +14,8 @@ from common.constants import (
     MSG_PLAY_CARD,
     MSG_SWAP_DECK,
     MSG_DONE,
+    MSG_BEAT,
+    MSG_TAKE,
     PLAYER_COUNT
 )
 from common.protocol import decode_message, encode_message, split_frames
@@ -311,3 +313,58 @@ class GameServer:
             await self._broadcast_state(
                 f"Король {king_conn.name} объявил козырь: {sym} {suit}!"
             )
+
+    # ------------------------------------------------------------------
+    # Phase 3: main turns
+    # ------------------------------------------------------------------
+
+    async def _phase_turns(self) -> None:
+        """Run cyclic attack/defense exchanges until the round ends.
+
+        The attack order (Servant → Queen → Ace → King → Servant …) only
+        includes players who still have cards.  If a role's holder has run
+        out, that slot is skipped and the previous attacker goes directly to
+        the next active defender.  Example: if the Queen has no cards,
+        the Servant attacks the Ace.
+        """
+        assert self.engine is not None
+
+        # Canonical clockwise order of roles.
+        role_order = [ROLE_SERVANT, ROLE_QUEEN, ROLE_ACE, ROLE_KING]
+
+        # Index into role_order for the current attacker.
+        atk_pos = 0
+
+        for _ in range(200):  # safety bound
+            if self.engine.is_round_over():
+                break
+
+            # Build the list of roles whose holders still have cards.
+            active_roles = [
+                r for r in role_order
+                if (p := self._player_by_role(r)) and p.hand
+            ]
+            if len(active_roles) < 2:
+                break
+
+            # Wrap attacker position into active list.
+            atk_pos = atk_pos % len(active_roles)
+            atk_role = active_roles[atk_pos]
+
+            # Defender is the next active role clockwise.
+            def_role = active_roles[(atk_pos + 1) % len(active_roles)]
+
+            await self._run_exchange(atk_role, def_role)
+
+            # After the exchange recalculate active roles — someone may have
+            # run out of cards — then advance to the next attacker.
+            active_roles = [
+                r for r in role_order
+                if (p := self._player_by_role(r)) and p.hand
+            ]
+            if active_roles:
+                # Move to the role that follows def_role in the active list.
+                if def_role in active_roles:
+                    atk_pos = active_roles.index(def_role)
+                else:
+                    atk_pos = (atk_pos + 1) % len(active_roles)
