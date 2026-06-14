@@ -61,3 +61,5 @@ MSG_DONE: str = "DONE"
 MSG_DECLARE_TRUMP: str = "DECLARE_TRUMP"
 MSG_BEAT: str = "BEAT"
 MSG_TAKE: str = "TAKE"
+MSG_START: str = "START"
+

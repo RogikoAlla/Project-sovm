@@ -1,4 +1,6 @@
-"""Asyncio TCP server for King and Servant."""
+"""Asyncio TCP server: accepts 4 players and manages the game session."""
+
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -9,30 +11,36 @@ from common.constants import (
     DEFAULT_PORT,
     DECK_36,
     ENCODING,
-    MSG_JOIN,
-    MSG_GAME_STATE,
-    MSG_PLAY_CARD,
-    MSG_SWAP_DECK,
-    MSG_DONE,
     MSG_BEAT,
+    MSG_DECLARE_TRUMP,
+    MSG_DONE,
+    MSG_ERROR,
+    MSG_GAME_STATE,
+    MSG_JOIN,
+    MSG_PLAY_CARD,
+    MSG_ROUND_END,
+    MSG_START,
+    MSG_SWAP_DECK,
     MSG_TAKE,
-    PLAYER_COUNT
+    MSG_THROW,
+    PLAYER_COUNT,
+    ROLE_ACE,
+    ROLE_KING,
+    ROLE_QUEEN,
+    ROLE_SERVANT,
+    SUIT_SYMBOLS,
 )
+from common.models import Card
 from common.protocol import decode_message, encode_message, split_frames
+from server.game_engine import GameEngine, ServerPlayer
 
 logger = logging.getLogger(__name__)
 
-TURN_TIMEOUT = 60
+TURN_TIMEOUT = 60  # server-side limit (clients use a slightly shorter 58s)
 
 
 class ClientConnection:
-    """Wraps a single asyncio client connection.
-
-    Args:
-        reader: Asyncio stream reader.
-        writer: Asyncio stream writer.
-        player_id: Assigned integer ID.
-    """
+    """Wraps a single asyncio client connection."""
 
     def __init__(self, reader, writer, player_id: int) -> None:
         """Store reader/writer and player identifier."""
@@ -65,7 +73,7 @@ class ClientConnection:
                 return None
 
     async def recv_timeout(self, seconds: int):
-        """Receive with a timeout; returns None on timeout or disconnect."""
+        """Receive with a timeout; returns ``None`` on timeout/disconnect."""
         try:
             return await asyncio.wait_for(self.recv(), timeout=seconds)
         except asyncio.TimeoutError:
@@ -80,13 +88,7 @@ class ClientConnection:
 
 
 class GameServer:
-    """Top-level server: waits for 4 connections, then runs the game.
-
-    Args:
-        host: Bind address.
-        port: TCP port.
-        deck_size: 36 or 52.
-    """
+    """Top-level server: waits for 4 connections, then runs the game."""
 
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, deck_size=DECK_36) -> None:
         """Initialize server configuration."""
@@ -94,7 +96,7 @@ class GameServer:
         self.port = port
         self.deck_size = deck_size
         self.connections: list[ClientConnection] = []
-        self.engine = None
+        self.engine: Optional[GameEngine] = None
         self._lock = asyncio.Lock()
 
     async def start(self) -> None:
@@ -103,7 +105,7 @@ class GameServer:
             self._handle_client, self.host, self.port
         )
         addr = server.sockets[0].getsockname()
-        print(f"[Server] Waiting for {PLAYER_COUNT} players on {addr[0]}:{addr[1]}...")
+        print(f"[Сервер] Ждём {PLAYER_COUNT} игроков на {addr[0]}:{addr[1]}...")
         async with server:
             await server.serve_forever()
 
@@ -112,7 +114,7 @@ class GameServer:
         async with self._lock:
             pid = len(self.connections)
             if pid >= PLAYER_COUNT:
-                writer.write(encode_message("ERROR", "Game is full"))
+                writer.write(encode_message(MSG_ERROR, "Игра заполнена"))
                 await writer.drain()
                 writer.close()
                 return
@@ -125,7 +127,7 @@ class GameServer:
 
             conn.name = (msg[1] or {}).get("name", conn.name)
             self.connections.append(conn)
-            print(f"[Server] {conn.name} connected ({len(self.connections)}/{PLAYER_COUNT})")
+            print(f"[Сервер] {conn.name} подключился ({len(self.connections)}/{PLAYER_COUNT})")
 
             if len(self.connections) == PLAYER_COUNT:
                 asyncio.create_task(self._run_game())
@@ -236,7 +238,6 @@ class GameServer:
         )
         timer = await self._countdown("Старт раунда", 10)
         await timer
-
 
     # ------------------------------------------------------------------
     # Phase 1: King's blind swap
@@ -454,3 +455,52 @@ class GameServer:
                 await self._broadcast_state(f"{atk_conn.name} кладёт на стол: {shown}")
                 return "played"
             return "done"
+
+    async def _defender_turn(self, def_conn: ClientConnection) -> str:
+        """Resolve the defender's response, looping until beaten or taken.
+
+        The defender may submit one or more ``slot-card`` pairs; the loop
+        re-prompts for any cards still undefended and ends when every attack
+        card is beaten or the defender takes them all.
+
+        Returns:
+            ``'beat'`` if everything was defended, ``'took'`` otherwise.
+        """
+        assert self.engine is not None
+        while True:
+            undefended = self.engine.undefended_indices()
+            if not undefended:
+                return "beat"
+
+            await self._broadcast_state(
+                f"{def_conn.name} защищается — осталось отбить {len(undefended)}"
+            )
+            await def_conn.send(MSG_PLAY_CARD, {"action": "defense"})
+
+            timer = await self._countdown(f"Защита: {def_conn.name}", TURN_TIMEOUT)
+            msg = await def_conn.recv_timeout(TURN_TIMEOUT)
+            timer.cancel()
+
+            if msg is None or msg[0] == MSG_TAKE:
+                self.engine.defender_takes(def_conn.player_id)
+                await self._broadcast_state(f"{def_conn.name} забирает карты!")
+                return "took"
+
+            if msg[0] == MSG_BEAT:
+                error = None
+                for pair in (msg[1] or {}).get("pairs", []):
+                    atk_idx = int(pair["attack_idx"])
+                    card = Card.from_dict(pair["card"])
+                    ok, err = self.engine.play_defense_card(
+                        def_conn.player_id, atk_idx, card
+                    )
+                    if not ok:
+                        error = err
+                        break
+                if error:
+                    await def_conn.send(MSG_ERROR, error)
+                # Loop: finished → 'beat' at top, or re-prompt remaining cards.
+            else:
+                self.engine.defender_takes(def_conn.player_id)
+                await self._broadcast_state(f"{def_conn.name} забирает карты!")
+                return "took"
