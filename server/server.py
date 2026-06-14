@@ -4,7 +4,12 @@ import asyncio
 import logging
 
 from common.constants import (
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    DECK_36,
     ENCODING,
+    MSG_JOIN,
+    PLAYER_COUNT
 )
 from common.protocol import decode_message, encode_message, split_frames
 
@@ -63,3 +68,55 @@ class ClientConnection:
             self.writer.close()
         except Exception:
             pass
+
+
+class GameServer:
+    """Top-level server: waits for 4 connections, then runs the game.
+
+    Args:
+        host: Bind address.
+        port: TCP port.
+        deck_size: 36 or 52.
+    """
+
+    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, deck_size=DECK_36) -> None:
+        """Initialize server configuration."""
+        self.host = host
+        self.port = port
+        self.deck_size = deck_size
+        self.connections: list[ClientConnection] = []
+        self.engine = None
+        self._lock = asyncio.Lock()
+
+    async def start(self) -> None:
+        """Start listening for connections."""
+        server = await asyncio.start_server(
+            self._handle_client, self.host, self.port
+        )
+        addr = server.sockets[0].getsockname()
+        print(f"[Server] Waiting for {PLAYER_COUNT} players on {addr[0]}:{addr[1]}...")
+        async with server:
+            await server.serve_forever()
+
+    async def _handle_client(self, reader, writer) -> None:
+        """Accept a connection and wait for JOIN."""
+        async with self._lock:
+            pid = len(self.connections)
+            if pid >= PLAYER_COUNT:
+                writer.write(encode_message("ERROR", "Game is full"))
+                await writer.drain()
+                writer.close()
+                return
+
+            conn = ClientConnection(reader, writer, pid)
+            msg = await conn.recv()
+            if msg is None or msg[0] != MSG_JOIN:
+                conn.close()
+                return
+
+            conn.name = (msg[1] or {}).get("name", conn.name)
+            self.connections.append(conn)
+            print(f"[Server] {conn.name} connected ({len(self.connections)}/{PLAYER_COUNT})")
+
+            if len(self.connections) == PLAYER_COUNT:
+                asyncio.create_task(self._run_game())

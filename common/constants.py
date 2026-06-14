@@ -51,3 +51,5 @@ KING_SWAP_LIMIT: int = 1
 # Protocol message types
 MSG_THROW: str = "THROW"
 MSG_ERROR: str = "ERROR"
+MSG_JOIN: str = "JOIN"
+
