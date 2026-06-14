@@ -14,8 +14,11 @@ from common.constants import (
     ROLE_QUEEN,
     ROLE_SERVANT,
     ROLES_CCW,
+    SUITS,
 )
 from common.models import Card, PlayerInfo, build_deck
+
+MAX_TABLE_CARDS = 6
 
 
 @dataclass
@@ -108,6 +111,75 @@ class GameEngine:
             if p.player_id == defender_id:
                 self.defender_idx = i
 
+    def declare_trump(self, suit: str) -> bool:
+        """King declares the trump suit."""
+        if suit not in SUITS:
+            return False
+        self.trump_suit = suit
+        return True
+
+    def table_ranks(self) -> set:
+        """Return ranks currently on the table (attack + defense)."""
+        ranks = {c.rank for c in self.table_attack}
+        ranks |= {c.rank for c in self.table_defense.values()}
+        return ranks
+
+    def undefended_indices(self) -> list[int]:
+        """Return indices of attack cards not yet beaten."""
+        return [i for i in range(len(self.table_attack)) if i not in self.table_defense]
+
+    def validate_attack_batch(self, player_id: int, cards: list[Card]) -> tuple[bool, str]:
+        """Validate attack cards per Durak rules without applying them."""
+        if not cards:
+            return False, "Не выбрано ни одной карты"
+        player = self._get_player(player_id)
+        if player is None:
+            return False, "Игрок не найден"
+        if self.players[self.attacker_idx].player_id != player_id:
+            return False, "Сейчас не ваш ход атаки"
+
+        seen: list[Card] = []
+        for c in cards:
+            if c in seen:
+                return False, "Нельзя указывать одну карту дважды"
+            seen.append(c)
+        for c in cards:
+            if c not in player.hand:
+                return False, f"Карты {c} нет в вашей руке"
+
+        defender = self.players[self.defender_idx]
+        if not self.table_attack:
+            if len({c.rank for c in cards}) > 1:
+                return False, "Первая атака: все карты должны быть одного ранга"
+        else:
+            allowed = self.table_ranks()
+            for c in cards:
+                if c.rank not in allowed:
+                    return False, f"Нельзя подкинуть {c}: ранга «{c.rank}» нет на столе"
+
+        if len(self.table_attack) + len(cards) > MAX_TABLE_CARDS:
+            return False, f"Максимум {MAX_TABLE_CARDS} карт в атаке"
+        undefended = len(self.table_attack) - len(self.table_defense)
+        if undefended + len(cards) > len(defender.hand):
+            return False, "У защитника не хватит карт, чтобы отбиться"
+        return True, ""
+
+    def apply_attack_batch(self, player_id: int, cards: list[Card]) -> tuple[bool, str]:
+        """Validate and place attack cards on the table."""
+        ok, err = self.validate_attack_batch(player_id, cards)
+        if not ok:
+            return False, err
+        player = self._get_player(player_id)
+        assert player is not None
+        for c in cards:
+            player.remove_card(c)
+            self.table_attack.append(c)
+        return True, ""
+
+    def play_attack_card(self, player_id: int, card: Card) -> tuple[bool, str]:
+        """Place a single attacking card (convenience wrapper)."""
+        return self.apply_attack_batch(player_id, [card])
+
     def end_round(self) -> None:
         """Advance the round counter and clear the table."""
         self.round_number += 1
@@ -117,3 +189,10 @@ class GameEngine:
         """Remove all cards from the table."""
         self.table_attack.clear()
         self.table_defense.clear()
+
+    def _get_player(self, player_id: int) -> Optional[ServerPlayer]:
+        """Look up a player by ID."""
+        for p in self.players:
+            if p.player_id == player_id:
+                return p
+        return None
