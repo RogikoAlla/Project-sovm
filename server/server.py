@@ -189,3 +189,44 @@ class GameServer:
         for card in hand:
             counts[card.suit] = counts.get(card.suit, 0) + 1
         return max(counts, key=lambda s: counts[s]) if counts else "spades"
+
+    # ------------------------------------------------------------------
+    # Game flow
+    # ------------------------------------------------------------------
+
+    async def _run_game(self) -> None:
+        """Run the full multi-round game session."""
+        players = [ServerPlayer(player_id=c.player_id, name=c.name)
+                   for c in self.connections]
+        self.engine = GameEngine(players, self.deck_size)
+
+        await self._broadcast(MSG_START, {
+            "players": [{"id": p.player_id, "name": p.name} for p in players],
+            "deck_size": self.deck_size,
+        })
+
+        round_num = 0
+        while True:
+            round_num += 1
+            self.engine.deal()
+            print(f"[Сервер] Раунд {round_num}")
+            await self._play_round()
+            await self._broadcast(MSG_ROUND_END, {
+                "roles": {str(p.player_id): p.role for p in self.engine.players}
+            })
+            self.engine.end_round()
+
+    async def _play_round(self) -> None:
+        """One full round: pre-round pause → blind swap → trump → turns."""
+        await self._phase_pre_round()
+        await self._phase_king_swap()
+        await self._phase_declare_trump()
+        await self._phase_turns()
+
+    async def _phase_pre_round(self) -> None:
+        """Show dealt roles and hands, then count down 10 seconds before play."""
+        await self._broadcast_state(
+            "Новый раунд! Роли и руки розданы. Игра начнётся через 10 секунд..."
+        )
+        timer = await self._countdown("Старт раунда", 10)
+        await timer
