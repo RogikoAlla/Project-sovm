@@ -271,3 +271,43 @@ class GameServer:
                 await self._broadcast_state(f"Обмен не состоялся: {err}")
         else:
             await self._broadcast_state(f"Король {king_conn.name} не стал меняться.")
+
+    # ------------------------------------------------------------------
+    # Phase 2: trump declaration
+    # ------------------------------------------------------------------
+
+    async def _phase_declare_trump(self) -> None:
+        """King picks the trump suit from his own hand (30s)."""
+        assert self.engine is not None
+        king_conn = self._conn_by_role(ROLE_KING)
+        if king_conn is None:
+            self.engine.declare_trump("spades")
+            return
+
+        await self._broadcast_state(
+            f"Король {king_conn.name} выбирает козырь из своих карт (60 сек)..."
+        )
+        await king_conn.send(MSG_PLAY_CARD, {"action": "declare_trump"})
+
+        timer = await self._countdown(f"Король {king_conn.name}: выбор козыря", TURN_TIMEOUT)
+        msg = await king_conn.recv_timeout(TURN_TIMEOUT)
+        timer.cancel()
+
+        suit = None
+        if msg and msg[0] == MSG_DECLARE_TRUMP:
+            suit = (msg[1] or {}).get("suit")
+
+        if not suit or not self.engine.declare_trump(suit):
+            king_player = self._player_by_role(ROLE_KING)
+            suit = self._most_common_suit(king_player.hand if king_player else [])
+            self.engine.declare_trump(suit)
+            sym = SUIT_SYMBOLS.get(suit, suit)
+            await self._broadcast_state(
+                f"Козырь назначен автоматически: {sym} {suit}"
+            )
+        else:
+            sym = SUIT_SYMBOLS.get(suit, suit)
+            # Everyone sees the chosen trump.
+            await self._broadcast_state(
+                f"Король {king_conn.name} объявил козырь: {sym} {suit}!"
+            )
