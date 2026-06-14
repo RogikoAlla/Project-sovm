@@ -1,0 +1,20 @@
+### King and Servant — English catalog
+msgid ""
+msgstr ""
+"Project-Id-Version: King and Servant 0.1.0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+msgid "Enter your name: "
+msgstr "Enter your name: "
+
+msgid "Name cannot be empty."
+msgstr "Name cannot be empty."
+
+msgid "Connecting to the game..."
+msgstr "Connecting to the game..."
+
+msgid "Waiting for players..."
+msgstr "Waiting for players..."
