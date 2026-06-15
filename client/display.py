@@ -38,3 +38,17 @@ def render_table(state: GameState) -> str:
         else:
             rows.append(f"{render_card(atk)} -> ?")
     return "  |  ".join(rows)
+
+
+def render_players(state: GameState) -> str:
+    """Return one line per player with role, hand size and turn markers."""
+    lines = []
+    for p in state.players:
+        marker = " "
+        if p.player_id == state.current_attacker_id:
+            marker = "A"
+        elif p.player_id == state.current_defender_id:
+            marker = "D"
+        role = p.role or "-"
+        lines.append(f"{marker} {p.name} ({role}) — {p.hand_size}")
+    return "\n".join(lines)
