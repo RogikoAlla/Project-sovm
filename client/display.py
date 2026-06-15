@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from common.constants import SUIT_SYMBOLS
 from common.i18n import get_translator
-from common.models import Card
+from common.models import Card, GameState
 
 _ = get_translator()
 
@@ -24,3 +24,17 @@ def render_hand(hand: list[Card]) -> str:
         return _("Your hand is empty.")
     cells = [f"[{i}] {render_card(c)}" for i, c in enumerate(hand)]
     return "  ".join(cells)
+
+
+def render_table(state: GameState) -> str:
+    """Return the cards on the table as attack/defense pairs."""
+    if not state.table_attack:
+        return _("Table is empty.")
+    rows = []
+    for idx, atk in enumerate(state.table_attack):
+        defense = state.table_defense.get(idx) or state.table_defense.get(str(idx))
+        if defense is not None:
+            rows.append(f"{render_card(atk)} -> {render_card(defense)}")
+        else:
+            rows.append(f"{render_card(atk)} -> ?")
+    return "  |  ".join(rows)
