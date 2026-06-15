@@ -52,3 +52,18 @@ def render_players(state: GameState) -> str:
         role = p.role or "-"
         lines.append(f"{marker} {p.name} ({role}) — {p.hand_size}")
     return "\n".join(lines)
+
+
+def render_state(state: GameState) -> str:
+    """Return a full text snapshot of the current game state."""
+    trump = SUIT_SYMBOLS.get(state.trump_suit, state.trump_suit)
+    header = _("Round {n} | Trump: {trump}").format(n=state.round_number, trump=trump)
+    parts = [
+        header,
+        render_players(state),
+        _("Table:") + " " + render_table(state),
+        _("Hand:") + " " + render_hand(state.your_hand),
+    ]
+    if state.message:
+        parts.append(state.message)
+    return "\n".join(parts)

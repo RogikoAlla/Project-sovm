@@ -63,3 +63,14 @@ def test_render_players_marks_turn():
     out = display.render_players(_state())
     assert "A Bob" in out  # Bob is the attacker
     assert "D Alice" in out  # Alice is the defender
+
+
+def test_render_state_includes_round_and_trump():
+    out = display.render_state(_state(round_number=2))
+    assert "2" in out  # round number
+    assert "♥" in out  # trump symbol (hearts)
+
+
+def test_render_state_shows_message():
+    out = display.render_state(_state(message="Your turn!"))
+    assert "Your turn!" in out
