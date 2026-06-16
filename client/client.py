@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
-from common.constants import DEFAULT_HOST, DEFAULT_PORT, ENCODING
+from common.constants import BUFFER_SIZE, DEFAULT_HOST, DEFAULT_PORT, ENCODING, MSG_JOIN
 from common.protocol import decode_message, encode_message, split_frames
 
 
@@ -15,6 +16,8 @@ class GameClient:
         self.host = host
         self.port = port
         self._buffer = ""
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
 
     def encode(self, msg_type: str, payload: Any = None) -> bytes:
         """Encode an outgoing message to bytes ready to send."""
@@ -25,3 +28,28 @@ class GameClient:
         self._buffer += data.decode(ENCODING)
         frames, self._buffer = split_frames(self._buffer)
         return [decode_message(frame) for frame in frames]
+
+    async def connect(self) -> None:
+        """Open the TCP connection to the server."""
+        self._reader, self._writer = await asyncio.open_connection(self.host, self.port)
+
+    async def send(self, msg_type: str, payload: Any = None) -> None:
+        """Send a typed message over the open connection."""
+        self._writer.write(self.encode(msg_type, payload))
+        await self._writer.drain()
+
+    async def join(self, name: str) -> None:
+        """Send the JOIN handshake with the player's name."""
+        await self.send(MSG_JOIN, {"name": name})
+
+    async def receive(self) -> list[tuple[str, Any]]:
+        """Read one chunk from the socket and return decoded messages."""
+        data = await self._reader.read(BUFFER_SIZE)
+        if not data:
+            return []
+        return self.feed(data)
+
+    async def close(self) -> None:
+        """Close the connection if it is open."""
+        if self._writer is not None:
+            self._writer.close()
