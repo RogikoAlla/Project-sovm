@@ -180,6 +180,35 @@ class GameEngine:
         """Place a single attacking card (convenience wrapper)."""
         return self.apply_attack_batch(player_id, [card])
 
+    def play_defense_card(self, player_id: int, attack_idx: int, card: Card) -> tuple[bool, str]:
+        """Beat one attack card with a defending card."""
+        player = self._get_player(player_id)
+        if player is None:
+            return False, "Игрок не найден"
+        defender = self.players[self.defender_idx]
+        if defender.player_id != player_id:
+            return False, "Сейчас не ваша защита"
+        if attack_idx < 0 or attack_idx >= len(self.table_attack):
+            return False, "Неверный номер карты на столе"
+        if attack_idx in self.table_defense:
+            return False, "Эта карта уже отбита"
+        if card not in player.hand:
+            return False, f"Карты {card} нет в вашей руке"
+        attack_card = self.table_attack[attack_idx]
+        if not card.beats(attack_card, self.trump_suit, self.deck_size):
+            return False, f"{card} не бьёт {attack_card}"
+        player.remove_card(card)
+        self.table_defense[attack_idx] = card
+        return True, ""
+
+    def defender_done(self) -> tuple[bool, str]:
+        """Declare a beat when all attack cards are defended."""
+        if self.undefended_indices():
+            return False, "Ещё не все карты отбиты"
+        self._clear_table()
+        self._check_active_status()
+        return True, ""
+
     def end_round(self) -> None:
         """Advance the round counter and clear the table."""
         self.round_number += 1
@@ -196,3 +225,9 @@ class GameEngine:
             if p.player_id == player_id:
                 return p
         return None
+
+    def _check_active_status(self) -> None:
+        """Mark players with empty hands as inactive."""
+        for player in self.players:
+            if not player.hand:
+                player.is_active = False

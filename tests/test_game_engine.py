@@ -104,3 +104,44 @@ class TestAttackDefense:
             pytest.skip("Card happens to be in hand")
         ok, err = engine.play_attack_card(attacker.player_id, fake)
         assert not ok
+
+    def test_valid_defense(self):
+        """Defender should be able to beat an attack card with a stronger same-suit card."""
+        engine = self._setup_attack()
+        attacker = engine.players[0]
+        defender = engine.players[1]
+        for atk_card in attacker.hand:
+            for def_card in defender.hand:
+                if def_card.beats(atk_card, engine.trump_suit, DECK_36):
+                    engine.play_attack_card(attacker.player_id, atk_card)
+                    ok, err = engine.play_defense_card(defender.player_id, 0, def_card)
+                    assert ok, err
+                    assert def_card in engine.table_defense.values()
+                    return
+        pytest.skip("No valid defense pair found in this deal")
+
+    def test_defender_done_clears_table(self):
+        """After all cards are defended, defender_done should clear the table."""
+        engine = self._setup_attack()
+        attacker = engine.players[0]
+        defender = engine.players[1]
+        for atk_card in attacker.hand:
+            for def_card in defender.hand:
+                if def_card.beats(atk_card, engine.trump_suit, DECK_36):
+                    engine.play_attack_card(attacker.player_id, atk_card)
+                    engine.play_defense_card(defender.player_id, 0, def_card)
+                    ok, err = engine.defender_done()
+                    assert ok, err
+                    assert len(engine.table_attack) == 0
+                    assert len(engine.table_defense) == 0
+                    return
+        pytest.skip("No valid defense pair found in this deal")
+
+    def test_defender_done_fails_with_undefended(self):
+        """defender_done should fail while attack cards remain undefended."""
+        engine = self._setup_attack()
+        attacker = engine.players[0]
+        engine.play_attack_card(attacker.player_id, attacker.hand[0])
+        ok, err = engine.defender_done()
+        assert not ok
+        assert "отбиты" in err
