@@ -6,6 +6,7 @@ They never read from stdin or touch the network, so they are easy to test.
 
 from __future__ import annotations
 
+from common.constants import SUITS
 from common.i18n import get_translator
 
 _ = get_translator()
@@ -38,3 +39,28 @@ def parse_card_indices(raw: str, hand_size: int) -> tuple[list[int] | None, str]
         indices.append(value)
 
     return indices, ""
+
+
+def parse_suit(raw: str) -> tuple[str | None, str]:
+    """Parse a trump suit chosen by the King.
+
+    Accepts either a canonical suit name (``"spades"``) or its position in
+    :data:`common.constants.SUITS` (``"0"``).
+
+    Returns:
+        ``(suit, "")`` on success, or ``(None, error_message)`` otherwise.
+    """
+    token = raw.strip().lower()
+    if not token:
+        return None, _("No suit selected.")
+
+    if token.isdigit():
+        index = int(token)
+        if 0 <= index < len(SUITS):
+            return SUITS[index], ""
+        return None, _("Suit number {index} is out of range.").format(index=index)
+
+    if token in SUITS:
+        return token, ""
+
+    return None, _("'{token}' is not a valid suit.").format(token=token)
