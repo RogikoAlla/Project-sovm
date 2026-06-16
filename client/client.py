@@ -21,11 +21,7 @@ class GameClient:
         return encode_message(msg_type, payload)
 
     def feed(self, data: bytes) -> list[tuple[str, Any]]:
-        """Add received bytes and return any complete decoded messages.
-
-        Partial messages are kept in the internal buffer until the rest of
-        their bytes arrive, so callers can pass arbitrary socket chunks.
-        """
+        """Buffer received bytes and return any complete decoded messages."""
         self._buffer += data.decode(ENCODING)
         frames, self._buffer = split_frames(self._buffer)
         return [decode_message(frame) for frame in frames]

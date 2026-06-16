@@ -1,8 +1,4 @@
-"""Parsing of raw player input for the King and Servant client.
-
-Pure functions that turn the text a player types into structured values.
-They never read from stdin or touch the network, so they are easy to test.
-"""
+"""Parsing of raw player input for the King and Servant client."""
 
 from __future__ import annotations
 
@@ -13,16 +9,7 @@ _ = get_translator()
 
 
 def parse_card_indices(raw: str, hand_size: int) -> tuple[list[int] | None, str]:
-    """Parse a space-separated list of card indices.
-
-    Args:
-        raw: Text typed by the player, e.g. ``"0 2 3"``.
-        hand_size: Number of cards currently in the player's hand.
-
-    Returns:
-        ``(indices, "")`` on success, or ``(None, error_message)`` if the
-        input is empty, non-numeric, out of range, or has duplicates.
-    """
+    """Parse a space-separated list of card indices into ``(indices, error)``."""
     tokens = raw.split()
     if not tokens:
         return None, _("No cards selected.")
@@ -42,14 +29,7 @@ def parse_card_indices(raw: str, hand_size: int) -> tuple[list[int] | None, str]
 
 
 def parse_suit(raw: str) -> tuple[str | None, str]:
-    """Parse a trump suit chosen by the King.
-
-    Accepts either a canonical suit name (``"spades"``) or its position in
-    :data:`common.constants.SUITS` (``"0"``).
-
-    Returns:
-        ``(suit, "")`` on success, or ``(None, error_message)`` otherwise.
-    """
+    """Parse a trump suit (name or index) into ``(suit, error)``."""
     token = raw.strip().lower()
     if not token:
         return None, _("No suit selected.")

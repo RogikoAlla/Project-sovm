@@ -1,8 +1,4 @@
-"""Terminal rendering for the King and Servant client.
-
-Pure formatting helpers: each function turns game data into a string,
-so they are easy to test and free of any I/O or networking.
-"""
+"""Terminal rendering helpers for the King and Servant client."""
 
 from __future__ import annotations
 
