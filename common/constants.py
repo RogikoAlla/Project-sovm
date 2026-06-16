@@ -51,3 +51,15 @@ KING_SWAP_LIMIT: int = 1
 # Protocol message types
 MSG_THROW: str = "THROW"
 MSG_ERROR: str = "ERROR"
+MSG_JOIN: str = "JOIN"
+MSG_GAME_STATE: str = "GAME_STATE"
+MSG_PLAY_CARD: str = "PLAY_CARD"
+MSG_ROUND_END: str = "ROUND_END"
+MSG_GAME_END: str = "GAME_END"
+MSG_SWAP_DECK: str = "SWAP_DECK"
+MSG_DONE: str = "DONE"
+MSG_DECLARE_TRUMP: str = "DECLARE_TRUMP"
+MSG_BEAT: str = "BEAT"
+MSG_TAKE: str = "TAKE"
+MSG_START: str = "START"
+

@@ -1,0 +1,21 @@
+### King and Servant — message catalog template
+msgid ""
+msgstr ""
+"Project-Id-Version: King and Servant 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: \n"
+
+msgid "Enter your name: "
+msgstr ""
+
+msgid "Name cannot be empty."
+msgstr ""
+
+msgid "Connecting to the game..."
+msgstr ""
+
+msgid "Waiting for players..."
+msgstr ""

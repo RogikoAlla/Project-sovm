@@ -1,6 +1,5 @@
 # Legacy project — local reference only, do not commit
 old_repo/
-
 # Python
 __pycache__/
 *.py[cod]
