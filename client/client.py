@@ -1,10 +1,4 @@
-"""Networking skeleton for the King and Servant client.
-
-This module owns the wire-framing layer: turning outgoing messages into
-bytes and reassembling incoming byte chunks into decoded messages. The
-actual socket connection is added in a later step; keeping the framing
-separate makes it unit-testable without any real network.
-"""
+"""Networking skeleton for the King and Servant client. """
 
 from __future__ import annotations
 
