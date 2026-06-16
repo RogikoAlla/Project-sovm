@@ -11,6 +11,7 @@ from common.constants import (
     CARDS_PER_PLAYER_52,
     DECK_36,
     PLAYER_COUNT,
+    ROLE_KING,
     ROLE_QUEEN,
     ROLE_SERVANT,
     ROLES_CCW,
@@ -199,6 +200,20 @@ class GameEngine:
             return False, f"{card} не бьёт {attack_card}"
         player.remove_card(card)
         self.table_defense[attack_idx] = card
+        return True, ""
+
+    def defender_takes(self, player_id: int) -> tuple[bool, str]:
+        """Defender picks up all table cards; attacker and defender swap roles."""
+        defender = self.players[self.defender_idx]
+        if defender.player_id != player_id:
+            return False, "Забрать карты может только защищающийся"
+        picked = list(self.table_attack) + list(self.table_defense.values())
+        defender.hand.extend(picked)
+        attacker = self.players[self.attacker_idx]
+        if not (defender.role == ROLE_SERVANT and attacker.role == ROLE_KING):
+            attacker.role, defender.role = defender.role, attacker.role
+        self._clear_table()
+        self._check_active_status()
         return True, ""
 
     def defender_done(self) -> tuple[bool, str]:
