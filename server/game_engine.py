@@ -1,4 +1,11 @@
-"""Core game engine: state machine for King and Servant rounds."""
+"""Core game engine: state machine for King and Servant rounds.
+
+Attack/defense rules follow classic Durak, with one twist from KAS: the King
+(rank) beats the Ace (rank). Only the attacker may add cards (подкидывание) or
+declare a beat. Added cards must match a rank already present on the table.
+
+This module is pure game logic — no network or UI dependencies.
+"""
 
 from __future__ import annotations
 
@@ -17,14 +24,22 @@ from common.constants import (
     ROLES_CCW,
     SUITS,
 )
-from common.models import Card, PlayerInfo, build_deck
+from common.models import Card, GameState, PlayerInfo, build_deck
 
-MAX_TABLE_CARDS = 6
+MAX_TABLE_CARDS = 6  # standard Durak limit per attack
 
 
 @dataclass
 class ServerPlayer:
-    """Server-side player state including the private hand."""
+    """Server-side player state including the private hand.
+
+    Args:
+        player_id: Unique integer ID.
+        name: Display name.
+        role: Current role or ``None`` before the first deal.
+        hand: Private list of cards (never sent to other clients).
+        is_active: ``True`` while the player still has cards this round.
+    """
 
     player_id: int
     name: str
@@ -33,7 +48,7 @@ class ServerPlayer:
     is_active: bool = True
 
     def to_info(self) -> PlayerInfo:
-        """Return a public-facing PlayerInfo (hand hidden as a count)."""
+        """Return a public-facing ``PlayerInfo`` (hand hidden as a count)."""
         return PlayerInfo(
             player_id=self.player_id,
             name=self.name,
@@ -43,7 +58,11 @@ class ServerPlayer:
         )
 
     def remove_card(self, card: Card) -> bool:
-        """Remove card from hand if present."""
+        """Remove *card* from hand if present.
+
+        Returns:
+            ``True`` if the card was found and removed.
+        """
         try:
             self.hand.remove(card)
             return True
@@ -52,7 +71,16 @@ class ServerPlayer:
 
 
 class GameEngine:
-    """Manages a complete multi-round King and Servant session."""
+    """Manages a complete multi-round King and Servant session.
+
+    Handles dealing, role assignment (via King of Spades), trump declaration,
+    Durak-style attack/defence with подкидывание, role swaps on take, and the
+    King's one-time blind hand swap per round.
+
+    Args:
+        players: Ordered list of four ``ServerPlayer`` objects.
+        deck_size: 36 or 52.
+    """
 
     def __init__(self, players: list[ServerPlayer], deck_size: int = DECK_36) -> None:
         if len(players) != PLAYER_COUNT:
@@ -69,7 +97,11 @@ class GameEngine:
         self._roles_assigned: bool = False
 
     def deal(self) -> None:
-        """Shuffle and deal cards; assign roles based on the King of Spades."""
+        """Shuffle and deal cards; assign roles based on the King of Spades.
+
+        Resets trump, blind-swap flag, and table. Roles are assigned only on
+        the first deal of the session; subsequent deals keep existing roles.
+        """
         self.trump_suit = ""
         self.king_swap_used = False
         self._clear_table()
@@ -105,7 +137,10 @@ class GameEngine:
         self.defender_idx = role_to_idx[ROLE_QUEEN]
 
     def set_attacker_defender(self, attacker_id: int, defender_id: int) -> None:
-        """Point attacker/defender indices at the given players."""
+        """Point attacker/defender indices at the given players.
+
+        Called by the server before each exchange to keep turn order in sync.
+        """
         for i, p in enumerate(self.players):
             if p.player_id == attacker_id:
                 self.attacker_idx = i
@@ -113,14 +148,21 @@ class GameEngine:
                 self.defender_idx = i
 
     def declare_trump(self, suit: str) -> bool:
-        """King declares the trump suit."""
+        """King declares the trump suit.
+
+        Args:
+            suit: Suit name to set as trump.
+
+        Returns:
+            ``True`` if the suit is valid and was set.
+        """
         if suit not in SUITS:
             return False
         self.trump_suit = suit
         return True
 
     def table_ranks(self) -> set:
-        """Return ranks currently on the table (attack + defense)."""
+        """Return ranks currently on the table (attack + defence cards)."""
         ranks = {c.rank for c in self.table_attack}
         ranks |= {c.rank for c in self.table_defense.values()}
         return ranks
@@ -130,7 +172,11 @@ class GameEngine:
         return [i for i in range(len(self.table_attack)) if i not in self.table_defense]
 
     def validate_attack_batch(self, player_id: int, cards: list[Card]) -> tuple[bool, str]:
-        """Validate attack cards per Durak rules without applying them."""
+        """Validate attack cards per Durak rules without applying them.
+
+        Returns:
+            ``(ok, error_message)`` — empty message on success.
+        """
         if not cards:
             return False, "Не выбрано ни одной карты"
         player = self._get_player(player_id)
@@ -182,7 +228,16 @@ class GameEngine:
         return self.apply_attack_batch(player_id, [card])
 
     def play_defense_card(self, player_id: int, attack_idx: int, card: Card) -> tuple[bool, str]:
-        """Beat one attack card with a defending card."""
+        """Beat one attack card with a defending card.
+
+        Args:
+            player_id: ID of the defending player.
+            attack_idx: Index in ``table_attack`` being defended.
+            card: Card used to defend (must beat per Durak; King > Ace).
+
+        Returns:
+            ``(ok, error_message)``.
+        """
         player = self._get_player(player_id)
         if player is None:
             return False, "Игрок не найден"
@@ -203,7 +258,10 @@ class GameEngine:
         return True, ""
 
     def defender_takes(self, player_id: int) -> tuple[bool, str]:
-        """Defender picks up all table cards; attacker and defender swap roles."""
+        """Defender picks up all table cards; attacker and defender swap roles.
+
+        Exception: Servant taking from King does **not** swap roles.
+        """
         defender = self.players[self.defender_idx]
         if defender.player_id != player_id:
             return False, "Забрать карты может только защищающийся"
@@ -217,12 +275,55 @@ class GameEngine:
         return True, ""
 
     def defender_done(self) -> tuple[bool, str]:
-        """Declare a beat when all attack cards are defended."""
+        """Declare a beat when all attack cards are defended; clear the table."""
         if self.undefended_indices():
             return False, "Ещё не все карты отбиты"
         self._clear_table()
         self._check_active_status()
         return True, ""
+
+    def king_blind_swap(self, king_player_id: int, target_player_id: int) -> tuple[bool, str]:
+        """King swaps hands blindly with another player (once per round)."""
+        if self.king_swap_used:
+            return False, "Обмен уже использован"
+        king = self._get_player(king_player_id)
+        target = self._get_player(target_player_id)
+        if king is None or target is None:
+            return False, "Неверный игрок"
+        if king.role != ROLE_KING:
+            return False, "Обмен доступен только Королю"
+        if king_player_id == target_player_id:
+            return False, "Король не может меняться сам с собой"
+        king.hand, target.hand = target.hand, king.hand
+        self.king_swap_used = True
+        return True, ""
+
+    def is_round_over(self) -> bool:
+        """Return True if at most one active player still holds cards."""
+        return len([p for p in self.players if p.is_active]) <= 1
+
+    def build_game_state(self, for_player_id: int) -> GameState:
+        """Build a ``GameState`` snapshot tailored for *for_player_id*.
+
+        The receiving player's private hand is included; ``table_defense`` keys
+        are string indices for the wire protocol.
+        """
+        target = self._get_player(for_player_id)
+        hand = target.hand if target else []
+        attacker = self.players[self.attacker_idx]
+        defender = self.players[self.defender_idx]
+        return GameState(
+            players=[p.to_info() for p in self.players],
+            your_hand=hand,
+            trump_suit=self.trump_suit,
+            deck_size=self.deck_size,
+            table_attack=list(self.table_attack),
+            table_defense={str(k): v for k, v in self.table_defense.items()},
+            current_attacker_id=attacker.player_id,
+            current_defender_id=defender.player_id,
+            king_swap_used=self.king_swap_used,
+            round_number=self.round_number,
+        )
 
     def end_round(self) -> None:
         """Advance the round counter and clear the table."""
@@ -242,7 +343,7 @@ class GameEngine:
         return None
 
     def _check_active_status(self) -> None:
-        """Mark players with empty hands as inactive."""
+        """Mark players with empty hands as inactive (role is preserved)."""
         for player in self.players:
             if not player.hand:
                 player.is_active = False

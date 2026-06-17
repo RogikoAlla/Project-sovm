@@ -1,4 +1,8 @@
-"""Shared data models: Card, PlayerInfo, GameState, build_deck."""
+"""Shared data models for the King and Servant domain layer.
+
+Provides immutable cards, deck construction, public player descriptors,
+and serialisable game-state snapshots exchanged between server and clients.
+"""
 
 from __future__ import annotations
 
@@ -18,7 +22,12 @@ from common.constants import (
 
 @dataclass(frozen=True, order=False)
 class Card:
-    """Immutable playing card identified by rank and suit."""
+    """Immutable playing card identified by rank and suit.
+
+    Args:
+        rank: Card rank string, e.g. ``'A'``, ``'10'``, ``'K'``.
+        suit: Suit name: ``'spades'``, ``'hearts'``, ``'diamonds'``, ``'clubs'``.
+    """
 
     rank: str
     suit: str
@@ -27,7 +36,14 @@ class Card:
     _RANK_ORDER_52: ClassVar[tuple] = ("2", "3", "4", "5") + RANKS_36
 
     def rank_value(self, deck_size: int = DECK_36) -> int:
-        """Return numeric strength of this card's rank (King > Ace in KAS)."""
+        """Return numeric strength of this card's rank (King > Ace in KAS).
+
+        Args:
+            deck_size: 36 or 52 — selects which rank ordering to use.
+
+        Returns:
+            Integer strength (higher = stronger).
+        """
         order = self._RANK_ORDER_36 if deck_size == DECK_36 else self._RANK_ORDER_52
         base = list(order)
         if "K" in base and "A" in base:
@@ -36,7 +52,19 @@ class Card:
         return base.index(self.rank) if self.rank in base else -1
 
     def beats(self, other: "Card", trump: str, deck_size: int = DECK_36) -> bool:
-        """Return True if this card beats *other* under Durak + KAS rules."""
+        """Return True if this card beats *other* under Durak + KAS rules.
+
+        King (rank) is stronger than Ace (rank). A trump card beats any non-trump
+        card of a different suit.
+
+        Args:
+            other: The card being defended against.
+            trump: Current trump suit name.
+            deck_size: Deck size used for rank comparison.
+
+        Returns:
+            ``True`` if this card beats *other*.
+        """
         if self.suit == other.suit:
             return self.rank_value(deck_size) > other.rank_value(deck_size)
         if self.suit == trump and other.suit != trump:
@@ -62,7 +90,14 @@ class Card:
 
     @classmethod
     def from_dict(cls, data: dict) -> Card:
-        """Deserialize card from a dictionary."""
+        """Deserialize card from a dictionary.
+
+        Args:
+            data: Dict with ``rank`` and ``suit`` keys.
+
+        Returns:
+            A ``Card`` instance.
+        """
         return cls(rank=data["rank"], suit=data["suit"])
 
     @property
@@ -72,7 +107,17 @@ class Card:
 
 
 def build_deck(deck_size: int = DECK_36) -> list[Card]:
-    """Build and return a shuffled deck of the given size."""
+    """Build and return a shuffled deck of the given size.
+
+    Args:
+        deck_size: Either 36 or 52.
+
+    Returns:
+        Shuffled list of ``Card`` objects.
+
+    Raises:
+        ValueError: If *deck_size* is not 36 or 52.
+    """
     ranks = RANKS_36 if deck_size == DECK_36 else ("2", "3", "4", "5") + RANKS_36
     cards = [Card(rank=r, suit=s) for s in SUITS for r in ranks]
     random.shuffle(cards)
@@ -81,7 +126,17 @@ def build_deck(deck_size: int = DECK_36) -> list[Card]:
 
 @dataclass
 class PlayerInfo:
-    """Lightweight player descriptor shared between client and server."""
+    """Lightweight player descriptor shared between client and server.
+
+    The private hand is hidden; only ``hand_size`` is visible to other players.
+
+    Args:
+        player_id: Unique integer identifier assigned by the server.
+        name: Display name chosen by the player.
+        role: Current role string or ``None`` before the first deal.
+        hand_size: Number of cards currently in hand.
+        is_active: ``True`` if this player still has cards this round.
+    """
 
     player_id: int
     name: str
@@ -90,18 +145,42 @@ class PlayerInfo:
     is_active: bool = True
 
     def to_dict(self) -> dict:
-        """Serialize to JSON-compatible dict."""
+        """Serialize to a JSON-compatible dict."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> PlayerInfo:
-        """Deserialize from dict."""
+        """Deserialize from dict.
+
+        Args:
+            data: Dictionary with ``PlayerInfo`` fields.
+
+        Returns:
+            A ``PlayerInfo`` instance.
+        """
         return cls(**data)
 
 
 @dataclass
 class GameState:
-    """Full game state snapshot sent to each client."""
+    """Full game state snapshot sent to each client.
+
+    Each player receives a personalised copy with ``your_hand`` filled in;
+    other players' hands are represented only via ``PlayerInfo.hand_size``.
+
+    Args:
+        players: List of all ``PlayerInfo`` objects (4 players).
+        your_hand: Cards in the receiving client's hand.
+        trump_suit: Current trump suit name.
+        deck_size: Total deck size (36 or 52).
+        table_attack: Cards currently played by the attacker on the table.
+        table_defense: Defending cards keyed by attack-card index (str on wire).
+        current_attacker_id: ``player_id`` of the active attacker.
+        current_defender_id: ``player_id`` of the active defender.
+        king_swap_used: Whether the King has already used the blind swap.
+        round_number: 1-based round counter within the current game session.
+        message: Optional status message to display.
+    """
 
     players: list[PlayerInfo]
     your_hand: list[Card]
@@ -116,7 +195,7 @@ class GameState:
     message: str = ""
 
     def to_dict(self) -> dict:
-        """Serialize full game state to JSON-compatible dict."""
+        """Serialize full game state to a JSON-compatible dict."""
         return {
             "players": [p.to_dict() for p in self.players],
             "your_hand": [c.to_dict() for c in self.your_hand],
@@ -133,7 +212,14 @@ class GameState:
 
     @classmethod
     def from_dict(cls, data: dict) -> GameState:
-        """Deserialize from dict."""
+        """Deserialize from dict.
+
+        Args:
+            data: Dictionary matching ``GameState`` fields.
+
+        Returns:
+            A ``GameState`` instance.
+        """
         return cls(
             players=[PlayerInfo.from_dict(p) for p in data["players"]],
             your_hand=[Card.from_dict(c) for c in data["your_hand"]],
