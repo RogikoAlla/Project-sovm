@@ -174,7 +174,7 @@ class GameClient:
                 break
 
     async def _read_line(self, timeout: float) -> Optional[str]:
-        """Read one line from the queue, or None on timeout."""
+        """Return one line from the queue, or None on timeout."""
         try:
             return await asyncio.wait_for(self._input_queue.get(), timeout)
         except asyncio.TimeoutError:

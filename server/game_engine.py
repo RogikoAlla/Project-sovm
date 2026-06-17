@@ -83,6 +83,7 @@ class GameEngine:
     """
 
     def __init__(self, players: list[ServerPlayer], deck_size: int = DECK_36) -> None:
+        """Initialise the engine with players and a deck size."""
         if len(players) != PLAYER_COUNT:
             raise ValueError(f"Exactly {PLAYER_COUNT} players required, got {len(players)}")
         self.players: list[ServerPlayer] = players
