@@ -18,3 +18,39 @@ msgstr "Connecting to the game..."
 
 msgid "Waiting for players..."
 msgstr "Waiting for players..."
+
+msgid "Connected. Waiting for players..."
+msgstr "Connected. Waiting for players..."
+
+msgid "Disconnected from server."
+msgstr "Disconnected from server."
+
+msgid "Game started."
+msgstr "Game started."
+
+msgid "Round ended"
+msgstr "Round ended"
+
+msgid "Game over"
+msgstr "Game over"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Choose trump suit"
+msgstr "Choose trump suit"
+
+msgid "Suits in your hand:"
+msgstr "Suits in your hand:"
+
+msgid "Enter suit number:"
+msgstr "Enter suit number:"
+
+msgid "Blind swap"
+msgstr "Blind swap"
+
+msgid "Your attack turn"
+msgstr "Your attack turn"
+
+msgid "Your defense turn"
+msgstr "Your defense turn"

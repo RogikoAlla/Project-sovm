@@ -2,8 +2,6 @@
 
 import builtins
 
-import pytest
-
 from common import i18n
 
 

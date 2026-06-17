@@ -18,3 +18,39 @@ msgstr "Подключение к игре..."
 
 msgid "Waiting for players..."
 msgstr "Ожидание игроков..."
+
+msgid "Connected. Waiting for players..."
+msgstr "Подключено. Ждём игроков..."
+
+msgid "Disconnected from server."
+msgstr "Соединение разорвано."
+
+msgid "Game started."
+msgstr "Игра началась."
+
+msgid "Round ended"
+msgstr "Раунд завершён"
+
+msgid "Game over"
+msgstr "Игра окончена"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Choose trump suit"
+msgstr "Выберите козырную масть"
+
+msgid "Suits in your hand:"
+msgstr "Масти в вашей руке:"
+
+msgid "Enter suit number:"
+msgstr "Введите номер масти:"
+
+msgid "Blind swap"
+msgstr "Слепой обмен рукой"
+
+msgid "Your attack turn"
+msgstr "Ваш ход: атака"
+
+msgid "Your defense turn"
+msgstr "Ваш ход: защита"
