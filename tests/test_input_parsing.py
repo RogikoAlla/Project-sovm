@@ -103,7 +103,9 @@ def test_parse_defense_invalid():
     assert parse_defense("1", hand, table_attack, {}) is None        # not a pair
     assert parse_defense("9-1", hand, table_attack, {}) is None       # bad slot
     assert parse_defense("1-9", hand, table_attack, {}) is None       # bad hand idx
-    assert parse_defense("1-1", hand, table_attack, {"0": Card("A", "spades")}) is None  # already beaten
+    # slot already beaten
+    beaten = {"0": Card("A", "spades")}
+    assert parse_defense("1-1", hand, table_attack, beaten) is None
 
 
 def test_format_defense_hint_nonempty():
