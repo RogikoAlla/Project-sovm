@@ -66,7 +66,7 @@ def task_dist():
     }
 
 
-def task_clean():
+def task_clean_artifacts():
     """Remove build artefacts."""
     return {
         "actions": [
