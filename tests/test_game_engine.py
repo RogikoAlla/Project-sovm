@@ -192,3 +192,37 @@ class TestDefenderTakes:
         engine.defender_takes(defender.player_id)
         assert attacker.role == ROLE_KING
         assert defender.role == ROLE_SERVANT
+
+
+class TestKingBlindSwap:
+    """Tests for King's blind swap privilege."""
+
+    def test_swap_once(self):
+        """King should be able to swap once and flag should be set."""
+        engine = _make_engine()
+        king = next(p for p in engine.players if p.role == ROLE_KING)
+        other = next(p for p in engine.players if p.role != ROLE_KING)
+        king_hand_before = list(king.hand)
+        other_hand_before = list(other.hand)
+        ok, err = engine.king_blind_swap(king.player_id, other.player_id)
+        assert ok, err
+        assert engine.king_swap_used is True
+        assert king.hand == other_hand_before
+        assert other.hand == king_hand_before
+
+    def test_swap_twice_fails(self):
+        """Second swap attempt should fail."""
+        engine = _make_engine()
+        king = next(p for p in engine.players if p.role == ROLE_KING)
+        other = next(p for p in engine.players if p.role != ROLE_KING)
+        engine.king_blind_swap(king.player_id, other.player_id)
+        ok, _ = engine.king_blind_swap(king.player_id, other.player_id)
+        assert not ok
+
+    def test_non_king_cannot_swap(self):
+        """Non-King player should not be able to initiate swap."""
+        engine = _make_engine()
+        servant = next(p for p in engine.players if p.role == ROLE_SERVANT)
+        other = next(p for p in engine.players if p.player_id != servant.player_id)
+        ok, _ = engine.king_blind_swap(servant.player_id, other.player_id)
+        assert not ok
