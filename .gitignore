@@ -3,10 +3,27 @@ old_repo/
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
 .eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# Coverage
 .coverage
 htmlcov/
 .pytest_cache/
-.venv/
-venv/
+
+# doit
+.doit.db*
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Sphinx
+docs/build/
+
+# Babel compiled translations
+locale/*/LC_MESSAGES/*.mo
