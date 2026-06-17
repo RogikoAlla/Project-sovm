@@ -13,64 +13,53 @@ def _state(**kwargs):
         your_hand=[Card("K", "spades")],
         trump_suit="hearts",
         deck_size=36,
-        current_attacker_id=1,
-        current_defender_id=0,
+        round_number=2,
     )
     base.update(kwargs)
     return GameState(**base)
 
 
-def test_render_card():
-    assert display.render_card(Card("K", "spades")) == "K♠"
+def test_card_str_contains_label():
+    out = display.card_str(Card("K", "spades"))
+    assert "K♠" in out
 
 
-def test_render_hand_numbers_cards():
-    out = display.render_hand([Card("6", "clubs"), Card("A", "hearts")])
-    assert "[0]" in out and "[1]" in out
+def test_render_hand_numbered():
+    out = display.render_hand_numbered([Card("6", "clubs"), Card("A", "hearts")])
+    assert "[ 1]" in out and "[ 2]" in out
     assert "6♣" in out and "A♥" in out
 
 
-def test_render_hand_empty():
-    assert display.render_hand([]) != ""
+def test_render_hand_numbered_empty():
+    assert display.render_hand_numbered([]) != ""
 
 
 def test_render_table_empty():
-    assert display.render_table(_state(table_attack=[])) != ""
+    out = display.render_table([], {}, "hearts")
+    assert "hearts" in out
 
 
-def test_render_table_with_pair():
-    state = _state(
-        table_attack=[Card("6", "spades")],
-        table_defense={0: Card("K", "spades")},
+def test_render_table_with_defense():
+    out = display.render_table(
+        [Card("6", "spades")], {"0": Card("K", "spades")}, "hearts"
     )
-    out = display.render_table(state)
     assert "6♠" in out and "K♠" in out and "->" in out
 
 
-def test_render_table_undefended():
-    state = _state(table_attack=[Card("6", "spades")], table_defense={})
-    out = display.render_table(state)
-    assert "6♠" in out and "?" in out
+def test_render_table_open_card():
+    out = display.render_table([Card("6", "spades")], {}, "hearts")
+    assert "6♠" in out and "open" in out
 
 
-def test_render_players_lists_names_and_roles():
-    out = display.render_players(_state())
+def test_render_players_marks_you_and_roles():
+    out = display.render_players(_state(), my_id=0)
     assert "Alice" in out and "Bob" in out
     assert "King" in out and "Servant" in out
+    assert "YOU" in out
 
 
-def test_render_players_marks_turn():
-    out = display.render_players(_state())
-    assert "A Bob" in out  # Bob is the attacker
-    assert "D Alice" in out  # Alice is the defender
-
-
-def test_render_state_includes_round_and_trump():
-    out = display.render_state(_state(round_number=2))
-    assert "2" in out  # round number
-    assert "♥" in out  # trump symbol (hearts)
-
-
-def test_render_state_shows_message():
-    out = display.render_state(_state(message="Your turn!"))
-    assert "Your turn!" in out
+def test_render_state_prints_round(capsys):
+    display.render_state(_state(round_number=2), my_id=0)
+    out = capsys.readouterr().out
+    assert "Round 2" in out
+    assert "Alice" in out
