@@ -145,3 +145,50 @@ class TestAttackDefense:
         ok, err = engine.defender_done()
         assert not ok
         assert "отбиты" in err
+
+
+class TestDefenderTakes:
+    """Tests for defender picking up table cards."""
+
+    def test_defender_takes_clears_table(self):
+        """After take, table should be empty and defender hand grows."""
+        engine = _make_engine()
+        engine.attacker_idx = 0
+        engine.defender_idx = 1
+        attacker = engine.players[0]
+        defender = engine.players[1]
+        card = attacker.hand[0]
+        engine.play_attack_card(attacker.player_id, card)
+        hand_size_before = len(defender.hand)
+        ok, err = engine.defender_takes(defender.player_id)
+        assert ok, err
+        assert len(engine.table_attack) == 0
+        assert len(defender.hand) > hand_size_before
+
+    def test_defender_takes_swaps_roles(self):
+        """Attacker and defender should swap roles after take (default case)."""
+        engine = _make_engine()
+        engine.attacker_idx = 0
+        engine.defender_idx = 1
+        attacker = engine.players[0]
+        defender = engine.players[1]
+        attacker.role = ROLE_SERVANT
+        defender.role = ROLE_QUEEN
+        engine.play_attack_card(attacker.player_id, attacker.hand[0])
+        engine.defender_takes(defender.player_id)
+        assert attacker.role == ROLE_QUEEN
+        assert defender.role == ROLE_SERVANT
+
+    def test_servant_takes_from_king_no_swap(self):
+        """Servant taking from King should NOT swap roles."""
+        engine = _make_engine()
+        engine.attacker_idx = 0
+        engine.defender_idx = 1
+        attacker = engine.players[0]
+        defender = engine.players[1]
+        attacker.role = ROLE_KING
+        defender.role = ROLE_SERVANT
+        engine.play_attack_card(attacker.player_id, attacker.hand[0])
+        engine.defender_takes(defender.player_id)
+        assert attacker.role == ROLE_KING
+        assert defender.role == ROLE_SERVANT
