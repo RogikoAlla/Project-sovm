@@ -1,0 +1,13 @@
+[run]
+include =
+    common/*.py
+    server/*.py
+    client/*.py
+omit =
+    tests/*
+    dodo.py
+    */main.py
+
+[report]
+fail_under = 75
+show_missing = True

@@ -1,9 +1,4 @@
-"""Internationalisation helpers for King and Servant.
-
-Provides a gettext-based translator. The catalogs live in ``locale/<lang>/``
-and are looked up by domain. Until UI code marks strings with ``_()`` the
-module is self-contained and depends only on the standard library.
-"""
+"""Gettext-based internationalisation helpers for King and Servant."""
 
 from __future__ import annotations
 
@@ -30,11 +25,7 @@ def _resolve_locale(locale: str | None) -> str:
 
 
 def get_translator(locale: str | None = None) -> Callable[[str], str]:
-    """Return a ``gettext``-style translation function.
-
-    Falls back to an identity function when no catalog exists for the
-    requested locale, so untranslated builds still run.
-    """
+    """Return a translation function, falling back to identity if no catalog."""
     locale = _resolve_locale(locale)
     try:
         translation = gettext.translation(
