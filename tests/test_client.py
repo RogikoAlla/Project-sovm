@@ -2,8 +2,17 @@
 
 import asyncio
 
-from client.client import GameClient
-from common.constants import DEFAULT_HOST, DEFAULT_PORT, MSG_JOIN
+from client.client import GameClient, render_message
+from common.constants import (
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    MSG_ERROR,
+    MSG_GAME_END,
+    MSG_GAME_STATE,
+    MSG_JOIN,
+    MSG_ROUND_END,
+)
+from common.models import Card, GameState, PlayerInfo
 from common.protocol import decode_message, encode_message
 
 
@@ -83,3 +92,29 @@ def test_receive_returns_empty_on_eof():
     client = GameClient()
     client._reader = FakeReader(b"")
     assert asyncio.run(client.receive()) == []
+
+
+def test_render_message_game_state():
+    state = GameState(
+        players=[PlayerInfo(player_id=0, name="Alice", role="King", hand_size=1)],
+        your_hand=[Card("K", "spades")],
+        trump_suit="hearts",
+        deck_size=36,
+        round_number=3,
+    )
+    out = render_message(MSG_GAME_STATE, state.to_dict())
+    assert out is not None
+    assert "Alice" in out and "3" in out
+
+
+def test_render_message_round_and_game_end():
+    assert render_message(MSG_ROUND_END, "winner") is not None
+    assert render_message(MSG_GAME_END, "done") is not None
+
+
+def test_render_message_error():
+    assert "boom" in render_message(MSG_ERROR, "boom")
+
+
+def test_render_message_unknown_returns_none():
+    assert render_message("SOMETHING_ELSE", {}) is None
