@@ -5,8 +5,23 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from common.constants import BUFFER_SIZE, DEFAULT_HOST, DEFAULT_PORT, ENCODING, MSG_JOIN
+from client import display
+from common.constants import (
+    BUFFER_SIZE,
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    ENCODING,
+    MSG_ERROR,
+    MSG_GAME_END,
+    MSG_GAME_STATE,
+    MSG_JOIN,
+    MSG_ROUND_END,
+)
+from common.i18n import get_translator
+from common.models import GameState
 from common.protocol import decode_message, encode_message, split_frames
+
+_ = get_translator()
 
 
 class GameClient:
@@ -53,3 +68,16 @@ class GameClient:
         """Close the connection if it is open."""
         if self._writer is not None:
             self._writer.close()
+
+
+def render_message(msg_type: str, payload: Any) -> str | None:
+    """Turn a server message into text to display, or None if nothing to show."""
+    if msg_type == MSG_GAME_STATE:
+        return display.render_state(GameState.from_dict(payload))
+    if msg_type == MSG_ROUND_END:
+        return _("Round over.") + " " + str(payload or "")
+    if msg_type == MSG_GAME_END:
+        return _("Game over.") + " " + str(payload or "")
+    if msg_type == MSG_ERROR:
+        return _("Error:") + " " + str(payload or "")
+    return None
