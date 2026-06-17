@@ -44,13 +44,13 @@ def task_locale():
 
 
 def task_docs():
-    """Build Sphinx HTML documentation."""
+    """Build Sphinx HTML documentation from hand-maintained rst sources."""
+    RST_FILES = glob.glob("docs/source/*.rst") + ["docs/source/conf.py"]
     return {
         "actions": [
-            "sphinx-apidoc -o docs/source common server client --force -q",
             "sphinx-build -b html docs/source docs/build/html -q",
         ],
-        "file_dep": SRC_FILES + ["docs/source/conf.py"],
+        "file_dep": SRC_FILES + RST_FILES,
         "targets": ["docs/build/html/index.html"],
         "verbosity": 1,
     }
