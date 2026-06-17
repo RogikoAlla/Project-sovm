@@ -224,6 +224,22 @@ class GameEngine:
         self._check_active_status()
         return True, ""
 
+    def king_blind_swap(self, king_player_id: int, target_player_id: int) -> tuple[bool, str]:
+        """King swaps hands blindly with another player (once per round)."""
+        if self.king_swap_used:
+            return False, "Обмен уже использован"
+        king = self._get_player(king_player_id)
+        target = self._get_player(target_player_id)
+        if king is None or target is None:
+            return False, "Неверный игрок"
+        if king.role != ROLE_KING:
+            return False, "Обмен доступен только Королю"
+        if king_player_id == target_player_id:
+            return False, "Король не может меняться сам с собой"
+        king.hand, target.hand = target.hand, king.hand
+        self.king_swap_used = True
+        return True, ""
+
     def end_round(self) -> None:
         """Advance the round counter and clear the table."""
         self.round_number += 1
