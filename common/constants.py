@@ -62,4 +62,7 @@ MSG_DECLARE_TRUMP: str = "DECLARE_TRUMP"
 MSG_BEAT: str = "BEAT"
 MSG_TAKE: str = "TAKE"
 MSG_START: str = "START"
-
+MSG_YOUR_TURN: str = "YOUR_TURN"
+MSG_CHAT: str = "CHAT"
+MSG_PING: str = "PING"
+MSG_PONG: str = "PONG"
