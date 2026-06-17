@@ -17,7 +17,7 @@ from common.constants import (
     ROLES_CCW,
     SUITS,
 )
-from common.models import Card, PlayerInfo, build_deck
+from common.models import Card, GameState, PlayerInfo, build_deck
 
 MAX_TABLE_CARDS = 6
 
@@ -239,6 +239,29 @@ class GameEngine:
         king.hand, target.hand = target.hand, king.hand
         self.king_swap_used = True
         return True, ""
+
+    def is_round_over(self) -> bool:
+        """Return True if one or zero players still hold cards."""
+        return len([p for p in self.players if p.is_active]) <= 1
+
+    def build_game_state(self, for_player_id: int) -> GameState:
+        """Build a GameState snapshot tailored for the given player."""
+        target = self._get_player(for_player_id)
+        hand = target.hand if target else []
+        attacker = self.players[self.attacker_idx]
+        defender = self.players[self.defender_idx]
+        return GameState(
+            players=[p.to_info() for p in self.players],
+            your_hand=hand,
+            trump_suit=self.trump_suit,
+            deck_size=self.deck_size,
+            table_attack=list(self.table_attack),
+            table_defense={str(k): v for k, v in self.table_defense.items()},
+            current_attacker_id=attacker.player_id,
+            current_defender_id=defender.player_id,
+            king_swap_used=self.king_swap_used,
+            round_number=self.round_number,
+        )
 
     def end_round(self) -> None:
         """Advance the round counter and clear the table."""

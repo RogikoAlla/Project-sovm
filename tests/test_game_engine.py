@@ -226,3 +226,59 @@ class TestKingBlindSwap:
         other = next(p for p in engine.players if p.player_id != servant.player_id)
         ok, _ = engine.king_blind_swap(servant.player_id, other.player_id)
         assert not ok
+
+
+class TestBuildGameState:
+    """Tests for game state snapshot building."""
+
+    def test_hand_visible_to_owner(self):
+        """Player should see their own hand in their snapshot."""
+        engine = _make_engine()
+        pid = engine.players[0].player_id
+        state = engine.build_game_state(pid)
+        assert len(state.your_hand) == len(engine.players[0].hand)
+
+    def test_players_included(self):
+        """All four players should appear in the snapshot."""
+        engine = _make_engine()
+        state = engine.build_game_state(engine.players[0].player_id)
+        assert len(state.players) == 4
+
+    def test_table_and_turn_fields(self):
+        """Snapshot should include table cards and current turn ids."""
+        engine = _make_engine()
+        engine.declare_trump("hearts")
+        engine.attacker_idx = 0
+        engine.defender_idx = 1
+        card = engine.players[0].hand[0]
+        engine.play_attack_card(engine.players[0].player_id, card)
+        state = engine.build_game_state(engine.players[0].player_id)
+        assert len(state.table_attack) == 1
+        assert state.trump_suit == "hearts"
+        assert state.current_attacker_id == 0
+        assert state.current_defender_id == 1
+
+
+class TestRoundLifecycle:
+    """Tests for round completion detection."""
+
+    def test_is_round_over_when_one_active(self):
+        """Round ends when at most one player remains active."""
+        engine = _make_engine()
+        for p in engine.players[1:]:
+            p.hand.clear()
+            p.is_active = False
+        assert engine.is_round_over() is True
+
+    def test_is_round_over_false_with_multiple_active(self):
+        """Round continues while multiple players hold cards."""
+        engine = _make_engine()
+        assert engine.is_round_over() is False
+
+    def test_end_round_increments_counter(self):
+        """end_round should advance round_number and clear the table."""
+        engine = _make_engine()
+        engine.table_attack.append(engine.players[0].hand[0])
+        engine.end_round()
+        assert engine.round_number == 2
+        assert len(engine.table_attack) == 0
