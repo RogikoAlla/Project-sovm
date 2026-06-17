@@ -76,4 +76,3 @@ class TestSplitFrames:
         frames, remainder = split_frames("")
         assert frames == []
         assert remainder == ""
-

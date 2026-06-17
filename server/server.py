@@ -410,7 +410,9 @@ class GameServer:
             more = await self._prompt_attack(atk_conn, def_conn, atk_role, def_role, False)
             if more != "played":
                 ok, _ = self.engine.defender_done()
-                await self._broadcast_state(f"{atk_conn.name} declared BEAT. The table is cleared.")
+                await self._broadcast_state(
+                    f"{atk_conn.name} declared BEAT. The table is cleared."
+                )
                 return "beat"
             # Otherwise loop: the defender must now beat the newly added cards.
 
@@ -435,7 +437,10 @@ class GameServer:
             if initial:
                 label = f"Attack: {atk_conn.name} ({atk_role}) -> {def_conn.name} ({def_role})"
             else:
-                label = f"{atk_conn.name}: you may throw in cards of the same ranks or declare beat"
+                label = (
+                    f"{atk_conn.name}: you may throw in cards of the same ranks "
+                    "or declare beat"
+                )
             await self._broadcast_state(label)
             await atk_conn.send(MSG_PLAY_CARD, {"action": "attack", "initial": initial})
 
