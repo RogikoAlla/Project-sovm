@@ -44,7 +44,7 @@ from common.constants import (
     MSG_TAKE,
     MSG_THROW,
 )
-from common.i18n import setup_i18n
+from common.i18n import setup_i18n, translate_message
 from common.models import GameState
 from common.protocol import decode_message, encode_message, split_frames
 
@@ -146,7 +146,7 @@ class GameClient:
             self._on_game_end(payload)
         elif msg_type == MSG_ERROR:
             clear_timer()
-            print(f"\n  [{_('Error')}] {payload}")
+            print(f"\n  [{_('Error')}] {translate_message(payload)}")
 
     async def _handle_prompt(self, action: str) -> None:
         """Run the appropriate interactive prompt for *action*."""
@@ -297,11 +297,11 @@ class GameClient:
         roles = (payload or {}).get("roles", {})
         print(f"\n  {_('Round ended')}:")
         for pid, role in roles.items():
-            print(f"    {pid}: {role}")
+            print(f"    {pid}: {translate_message(role)}")
 
     def _on_game_end(self, payload: dict) -> None:
         """Print the final game result."""
         roles = (payload or {}).get("final_roles", {})
         print(f"\n  {_('Game over')}:")
         for pid, role in roles.items():
-            print(f"    {pid}: {role}")
+            print(f"    {pid}: {translate_message(role)}")

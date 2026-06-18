@@ -39,7 +39,7 @@ def format_trump_menu(suits: list[str], hand: list[Card]) -> str:
     for i, suit in enumerate(suits, 1):
         sym = SUIT_SYMBOLS.get(suit, suit)
         count = sum(1 for c in hand if c.suit == suit)
-        lines.append(f"    [{i}] {sym} {suit}  ({count})")
+        lines.append(f"    [{i}] {sym} {_(suit)}  ({count})")
     lines.append(f"  {_('Enter suit number:')}")
     return "\n".join(lines)
 
@@ -67,7 +67,8 @@ def format_swap_menu(others: list[dict]) -> str:
     """Build the blind-swap target menu with 1-based numbers."""
     lines = ["", f"  === {_('Blind swap')} ==="]
     for i, p in enumerate(others, 1):
-        lines.append(f"    [{i}] {p['name']}  ({p.get('role', '?')})")
+        role = _(p["role"]) if p.get("role") else "?"
+        lines.append(f"    [{i}] {p['name']}  ({role})")
     lines.append("    [0] -")
     return "\n".join(lines)
 

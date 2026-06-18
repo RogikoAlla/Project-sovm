@@ -55,3 +55,183 @@ msgstr ""
 
 msgid "Your defense turn"
 msgstr ""
+
+msgid "Players:"
+msgstr ""
+
+msgid "Table:"
+msgstr ""
+
+msgid "Trump:"
+msgstr ""
+
+msgid "Your hand"
+msgstr ""
+
+msgid "KING AND SERVANT"
+msgstr ""
+
+msgid "Round"
+msgstr ""
+
+msgid "<- YOU"
+msgstr ""
+
+msgid "[out]"
+msgstr ""
+
+msgid "<- open"
+msgstr ""
+
+msgid "-"
+msgstr ""
+
+msgid "YOU"
+msgstr ""
+
+msgid "open"
+msgstr ""
+
+msgid "not declared"
+msgstr ""
+
+msgid "King"
+msgstr ""
+
+msgid "Ace"
+msgstr ""
+
+msgid "Queen"
+msgstr ""
+
+msgid "Servant"
+msgstr ""
+
+msgid "spades"
+msgstr ""
+
+msgid "hearts"
+msgstr ""
+
+msgid "diamonds"
+msgstr ""
+
+msgid "clubs"
+msgstr ""
+
+msgid "Game is full"
+msgstr ""
+
+msgid "New round! Roles and hands have been dealt. The game starts in 10 seconds..."
+msgstr ""
+
+msgid "Round start"
+msgstr ""
+
+msgid "King {name} is deciding whether to blindly swap hands. (60 sec)"
+msgstr ""
+
+msgid "King {name}: hand swap"
+msgstr ""
+
+msgid "King {king} blindly swapped hands with {target}!"
+msgstr ""
+
+msgid "The exchange did not take place: {error}"
+msgstr ""
+
+msgid "King {name} chose not to swap."
+msgstr ""
+
+msgid "King {name} is choosing a trump suit from their cards. (60 sec)..."
+msgstr ""
+
+msgid "King {name}: trump selection"
+msgstr ""
+
+msgid "Trump was selected automatically: {symbol} {suit}"
+msgstr ""
+
+msgid "King {name} declared trump: {symbol} {suit}!"
+msgstr ""
+
+msgid "{name} declared BEAT. The table is cleared."
+msgstr ""
+
+msgid "Attack: {attacker} ({attacker_role}) -> {defender} ({defender_role})"
+msgstr ""
+
+msgid "{name}: you may throw in cards of the same ranks or declare beat"
+msgstr ""
+
+msgid "Turn: {name}"
+msgstr ""
+
+msgid "{name} puts on the table: {cards}"
+msgstr ""
+
+msgid "{name} is defending - {count} left to beat"
+msgstr ""
+
+msgid "Defense: {name}"
+msgstr ""
+
+msgid "{name} takes the cards!"
+msgstr ""
+
+msgid "No cards selected"
+msgstr ""
+
+msgid "Player not found"
+msgstr ""
+
+msgid "It is not your attack turn"
+msgstr ""
+
+msgid "You cannot select the same card twice"
+msgstr ""
+
+msgid "Card {card} is not in your hand"
+msgstr ""
+
+msgid "Opening attack: all cards must have the same rank"
+msgstr ""
+
+msgid "Cannot throw in {card}: rank \"{rank}\" is not on the table"
+msgstr ""
+
+msgid "Maximum {max_cards} attack cards"
+msgstr ""
+
+msgid "The defender does not have enough cards to beat these"
+msgstr ""
+
+msgid "It is not your defense turn"
+msgstr ""
+
+msgid "Invalid table card number"
+msgstr ""
+
+msgid "This card is already beaten"
+msgstr ""
+
+msgid "{card} does not beat {attack_card}"
+msgstr ""
+
+msgid "Only the defender can take cards"
+msgstr ""
+
+msgid "Not all cards are beaten yet"
+msgstr ""
+
+msgid "The swap has already been used"
+msgstr ""
+
+msgid "Invalid player"
+msgstr ""
+
+msgid "Only the King can swap hands"
+msgstr ""
+
+msgid "The King cannot swap with himself"
+msgstr ""
