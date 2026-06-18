@@ -57,11 +57,12 @@ def task_docs():
 
 
 def task_dist():
-    """Build a wheel distribution."""
+    """Build wheel and sdist distributions."""
     return {
-        "actions": ["python -m build --wheel"],
+        "actions": ["python -m build"],
         "file_dep": SRC_FILES + ["pyproject.toml"],
         "targets": ["dist/king_and_servant-0.1.0-py3-none-any.whl"],
+        "task_dep": ["lint", "test"],
         "verbosity": 1,
     }
 
