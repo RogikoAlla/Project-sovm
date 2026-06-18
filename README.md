@@ -58,7 +58,7 @@ kas-server --deck 36
 ### Клиент (4 терминала)
 
 ```bash
-kas-client --host 127.0.0.1 --name Alice
+kas-client --name Player_name
 ```
 
 ## Задачи разработки (doit)
