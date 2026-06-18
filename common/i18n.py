@@ -5,7 +5,7 @@ from __future__ import annotations
 import builtins
 import gettext
 import os
-from typing import Callable
+from typing import Any, Callable
 
 DOMAIN = "messages"
 
@@ -39,3 +39,32 @@ def get_translator(locale: str | None = None) -> Callable[[str], str]:
 def setup_i18n(locale: str | None = None) -> None:
     """Install ``_`` as a builtin so any module can translate strings."""
     builtins._ = get_translator(locale)
+
+
+def message(msgid: str, **params: Any) -> dict[str, Any]:
+    """Build a protocol-safe localisable message payload."""
+    return {"msgid": msgid, "params": params}
+
+
+def translate_message(payload: Any) -> str:
+    """Translate a plain string or ``message()`` payload for local display."""
+    if payload == "":
+        return ""
+    if not hasattr(builtins, "_"):
+        setup_i18n()
+
+    translate = builtins._
+    if isinstance(payload, dict) and "msgid" in payload:
+        template = translate(str(payload["msgid"]))
+        params = {
+            key: translate_message(value) if isinstance(value, dict)
+            else value
+            for key, value in (payload.get("params") or {}).items()
+        }
+        try:
+            return template.format(**params)
+        except (KeyError, IndexError, ValueError):
+            return template
+    if isinstance(payload, str):
+        return translate(payload)
+    return str(payload)
