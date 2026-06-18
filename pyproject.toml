@@ -36,7 +36,7 @@ where = ["."]
 include = ["common*", "server*", "client*"]
 
 [tool.setuptools.package-data]
-"*" = ["locale/*/LC_MESSAGES/*.mo", "locale/*/LC_MESSAGES/*.po"]
+"common" = ["locale/*/LC_MESSAGES/*.mo", "locale/*/LC_MESSAGES/*.po"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

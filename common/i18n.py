@@ -13,7 +13,7 @@ DOMAIN = "messages"
 def _locale_dir() -> str:
     """Return the absolute path to the bundled ``locale`` directory."""
     here = os.path.dirname(__file__)
-    return os.path.normpath(os.path.join(here, "..", "locale"))
+    return os.path.join(here, "locale")
 
 
 def _resolve_locale(locale: str | None) -> str:
