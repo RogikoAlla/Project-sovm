@@ -1,0 +1,56 @@
+### King and Servant — Russian catalog
+msgid ""
+msgstr ""
+"Project-Id-Version: King and Servant 0.1.0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru\n"
+
+msgid "Enter your name: "
+msgstr "Введите ваше имя: "
+
+msgid "Name cannot be empty."
+msgstr "Имя не может быть пустым."
+
+msgid "Connecting to the game..."
+msgstr "Подключение к игре..."
+
+msgid "Waiting for players..."
+msgstr "Ожидание игроков..."
+
+msgid "Connected. Waiting for players..."
+msgstr "Подключено. Ждём игроков..."
+
+msgid "Disconnected from server."
+msgstr "Соединение разорвано."
+
+msgid "Game started."
+msgstr "Игра началась."
+
+msgid "Round ended"
+msgstr "Раунд завершён"
+
+msgid "Game over"
+msgstr "Игра окончена"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Choose trump suit"
+msgstr "Выберите козырную масть"
+
+msgid "Suits in your hand:"
+msgstr "Масти в вашей руке:"
+
+msgid "Enter suit number:"
+msgstr "Введите номер масти:"
+
+msgid "Blind swap"
+msgstr "Слепой обмен рукой"
+
+msgid "Your attack turn"
+msgstr "Ваш ход: атака"
+
+msgid "Your defense turn"
+msgstr "Ваш ход: защита"

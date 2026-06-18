@@ -26,4 +26,4 @@ build/
 docs/build/
 
 # Babel compiled translations
-locale/*/LC_MESSAGES/*.mo
+common/locale/*/LC_MESSAGES/*.mo

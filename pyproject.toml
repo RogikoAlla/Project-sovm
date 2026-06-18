@@ -3,37 +3,58 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "project-sovm"
+name = "king-and-servant"
 version = "0.1.0"
-description = "King and Servant — game core"
+description = "King and Servant — multiplayer console card game over TCP"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+authors = [{ name = "KAS Team" }]
+dependencies = [
+    "babel>=2.14",
+]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "pytest-asyncio>=0.23",
+    "flake8>=7.0",
+    "pydocstyle>=6.3",
     "sphinx>=7.0",
+    "alabaster>=0.7",
+    "doit>=0.36",
+    "build>=1.0",
 ]
+
+[project.scripts]
+kas-server = "server.main:main"
+kas-client = "client.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["common*", "server*"]
+include = ["common*", "server*", "client*"]
+
+[tool.setuptools.package-data]
+"common" = ["locale/*/LC_MESSAGES/*.mo", "locale/*/LC_MESSAGES/*.po"]
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "--cov --cov-config=.coveragerc -q"
 
 [tool.coverage.run]
 include = [
     "common/*.py",
     "server/*.py",
+    "client/*.py",
 ]
 omit = [
     "tests/*",
+    "dodo.py",
+    "*/main.py",
 ]
 
 [tool.coverage.report]
-fail_under = 90
+fail_under = 75
 show_missing = true

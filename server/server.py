@@ -105,7 +105,7 @@ class GameServer:
             self._handle_client, self.host, self.port
         )
         addr = server.sockets[0].getsockname()
-        print(f"[Сервер] Ждём {PLAYER_COUNT} игроков на {addr[0]}:{addr[1]}...")
+        print(f"[Server] Waiting for {PLAYER_COUNT} players at {addr[0]}:{addr[1]}...")
         async with server:
             await server.serve_forever()
 
@@ -114,7 +114,7 @@ class GameServer:
         async with self._lock:
             pid = len(self.connections)
             if pid >= PLAYER_COUNT:
-                writer.write(encode_message(MSG_ERROR, "Игра заполнена"))
+                writer.write(encode_message(MSG_ERROR, "Game is full"))
                 await writer.drain()
                 writer.close()
                 return
@@ -127,7 +127,7 @@ class GameServer:
 
             conn.name = (msg[1] or {}).get("name", conn.name)
             self.connections.append(conn)
-            print(f"[Сервер] {conn.name} подключился ({len(self.connections)}/{PLAYER_COUNT})")
+            print(f"[Server] {conn.name} connected ({len(self.connections)}/{PLAYER_COUNT})")
 
             if len(self.connections) == PLAYER_COUNT:
                 asyncio.create_task(self._run_game())
@@ -217,7 +217,7 @@ class GameServer:
         while True:
             round_num += 1
             self.engine.deal()
-            print(f"[Сервер] Раунд {round_num}")
+            print(f"[Server] Round {round_num}")
             await self._play_round()
             await self._broadcast(MSG_ROUND_END, {
                 "roles": {str(p.player_id): p.role for p in self.engine.players}
@@ -234,9 +234,9 @@ class GameServer:
     async def _phase_pre_round(self) -> None:
         """Show dealt roles and hands, then count down 10 seconds before play."""
         await self._broadcast_state(
-            "Новый раунд! Роли и руки розданы. Игра начнётся через 10 секунд..."
+            "New round! Roles and hands have been dealt. The game starts in 10 seconds..."
         )
-        timer = await self._countdown("Старт раунда", 10)
+        timer = await self._countdown("Round start", 10)
         await timer
 
     # ------------------------------------------------------------------
@@ -252,11 +252,11 @@ class GameServer:
 
         # State message intentionally has no trump yet (not declared).
         await self._broadcast_state(
-            f"Король {king_conn.name} решает: поменять руку вслепую? (60 сек)"
+            f"King {king_conn.name} is deciding whether to blindly swap hands. (60 sec)"
         )
         await king_conn.send(MSG_PLAY_CARD, {"action": "swap_offer"})
 
-        timer = await self._countdown(f"Король {king_conn.name}: обмен рукой", TURN_TIMEOUT)
+        timer = await self._countdown(f"King {king_conn.name}: hand swap", TURN_TIMEOUT)
         msg = await king_conn.recv_timeout(TURN_TIMEOUT)
         timer.cancel()
 
@@ -268,12 +268,12 @@ class GameServer:
                 tname = target.name if target else str(target_id)
                 # Everyone sees who swapped with whom.
                 await self._broadcast_state(
-                    f"Король {king_conn.name} поменялся руками с {tname} (вслепую)!"
+                    f"King {king_conn.name} blindly swapped hands with {tname}!"
                 )
             else:
-                await self._broadcast_state(f"Обмен не состоялся: {err}")
+                await self._broadcast_state(f"The exchange did not take place: {err}")
         else:
-            await self._broadcast_state(f"Король {king_conn.name} не стал меняться.")
+            await self._broadcast_state(f"King {king_conn.name} chose not to swap.")
 
     # ------------------------------------------------------------------
     # Phase 2: trump declaration
@@ -288,11 +288,11 @@ class GameServer:
             return
 
         await self._broadcast_state(
-            f"Король {king_conn.name} выбирает козырь из своих карт (60 сек)..."
+            f"King {king_conn.name} is choosing a trump suit from their cards. (60 sec)..."
         )
         await king_conn.send(MSG_PLAY_CARD, {"action": "declare_trump"})
 
-        timer = await self._countdown(f"Король {king_conn.name}: выбор козыря", TURN_TIMEOUT)
+        timer = await self._countdown(f"King {king_conn.name}: trump selection", TURN_TIMEOUT)
         msg = await king_conn.recv_timeout(TURN_TIMEOUT)
         timer.cancel()
 
@@ -306,13 +306,13 @@ class GameServer:
             self.engine.declare_trump(suit)
             sym = SUIT_SYMBOLS.get(suit, suit)
             await self._broadcast_state(
-                f"Козырь назначен автоматически: {sym} {suit}"
+                f"Trump was selected automatically: {sym} {suit}"
             )
         else:
             sym = SUIT_SYMBOLS.get(suit, suit)
             # Everyone sees the chosen trump.
             await self._broadcast_state(
-                f"Король {king_conn.name} объявил козырь: {sym} {suit}!"
+                f"King {king_conn.name} declared trump: {sym} {suit}!"
             )
 
     # ------------------------------------------------------------------
@@ -410,7 +410,9 @@ class GameServer:
             more = await self._prompt_attack(atk_conn, def_conn, atk_role, def_role, False)
             if more != "played":
                 ok, _ = self.engine.defender_done()
-                await self._broadcast_state(f"{atk_conn.name} объявил БИТО. Стол очищен.")
+                await self._broadcast_state(
+                    f"{atk_conn.name} declared BEAT. The table is cleared."
+                )
                 return "beat"
             # Otherwise loop: the defender must now beat the newly added cards.
 
@@ -433,13 +435,16 @@ class GameServer:
         assert self.engine is not None
         while True:
             if initial:
-                label = f"Атака: {atk_conn.name} ({atk_role}) → {def_conn.name} ({def_role})"
+                label = f"Attack: {atk_conn.name} ({atk_role}) -> {def_conn.name} ({def_role})"
             else:
-                label = f"{atk_conn.name}: можно подкинуть карты тех же рангов или объявить бито"
+                label = (
+                    f"{atk_conn.name}: you may throw in cards of the same ranks "
+                    "or declare beat"
+                )
             await self._broadcast_state(label)
             await atk_conn.send(MSG_PLAY_CARD, {"action": "attack", "initial": initial})
 
-            timer = await self._countdown(f"Ход: {atk_conn.name}", TURN_TIMEOUT)
+            timer = await self._countdown(f"Turn: {atk_conn.name}", TURN_TIMEOUT)
             msg = await atk_conn.recv_timeout(TURN_TIMEOUT)
             timer.cancel()
 
@@ -452,7 +457,7 @@ class GameServer:
                     await atk_conn.send(MSG_ERROR, err)
                     continue
                 shown = ", ".join(str(c) for c in cards)
-                await self._broadcast_state(f"{atk_conn.name} кладёт на стол: {shown}")
+                await self._broadcast_state(f"{atk_conn.name} puts on the table: {shown}")
                 return "played"
             return "done"
 
@@ -473,17 +478,17 @@ class GameServer:
                 return "beat"
 
             await self._broadcast_state(
-                f"{def_conn.name} защищается — осталось отбить {len(undefended)}"
+                f"{def_conn.name} is defending - {len(undefended)} left to beat"
             )
             await def_conn.send(MSG_PLAY_CARD, {"action": "defense"})
 
-            timer = await self._countdown(f"Защита: {def_conn.name}", TURN_TIMEOUT)
+            timer = await self._countdown(f"Defense: {def_conn.name}", TURN_TIMEOUT)
             msg = await def_conn.recv_timeout(TURN_TIMEOUT)
             timer.cancel()
 
             if msg is None or msg[0] == MSG_TAKE:
                 self.engine.defender_takes(def_conn.player_id)
-                await self._broadcast_state(f"{def_conn.name} забирает карты!")
+                await self._broadcast_state(f"{def_conn.name} takes the cards!")
                 return "took"
 
             if msg[0] == MSG_BEAT:
@@ -502,5 +507,5 @@ class GameServer:
                 # Loop: finished → 'beat' at top, or re-prompt remaining cards.
             else:
                 self.engine.defender_takes(def_conn.player_id)
-                await self._broadcast_state(f"{def_conn.name} забирает карты!")
+                await self._broadcast_state(f"{def_conn.name} takes the cards!")
                 return "took"

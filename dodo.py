@@ -6,7 +6,7 @@ DOIT_CONFIG = {"default_tasks": ["lint", "test"]}
 
 SRC_FILES = glob.glob("common/*.py") + glob.glob("server/*.py") + glob.glob("client/*.py")
 TEST_FILES = glob.glob("tests/*.py")
-PO_FILES = glob.glob("locale/*/LC_MESSAGES/messages.po")
+PO_FILES = glob.glob("common/locale/*/LC_MESSAGES/messages.po")
 MO_FILES = [f.replace(".po", ".mo") for f in PO_FILES]
 
 
@@ -35,7 +35,7 @@ def task_locale():
     """Compile .po translation files to .mo."""
     return {
         "actions": [
-            "pybabel compile -d locale",
+            "pybabel compile -d common/locale",
         ],
         "file_dep": PO_FILES,
         "targets": MO_FILES,
@@ -66,7 +66,7 @@ def task_dist():
     }
 
 
-def task_clean():
+def task_clean_artifacts():
     """Remove build artefacts."""
     return {
         "actions": [

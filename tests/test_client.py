@@ -1,19 +1,21 @@
-"""Tests for the client wire-framing layer."""
+"""Tests for the interactive game client."""
 
 import asyncio
 
-from client.client import GameClient, render_message
+from client.client import GameClient
 from common.constants import (
     DEFAULT_HOST,
     DEFAULT_PORT,
+    MSG_DECLARE_TRUMP,
+    MSG_DONE,
     MSG_ERROR,
-    MSG_GAME_END,
     MSG_GAME_STATE,
-    MSG_JOIN,
-    MSG_ROUND_END,
+    MSG_PLAY_CARD,
+    MSG_TAKE,
+    MSG_THROW,
 )
 from common.models import Card, GameState, PlayerInfo
-from common.protocol import decode_message, encode_message
+from common.protocol import decode_message
 
 
 class FakeWriter:
@@ -28,93 +30,211 @@ class FakeWriter:
     async def drain(self):
         pass
 
-    def close(self):
-        self.closed = True
+
+def _state(**kwargs):
+    base = dict(
+        players=[
+            PlayerInfo(player_id=0, name="Alice", role="King", hand_size=5),
+            PlayerInfo(player_id=1, name="Bob", role="Servant", hand_size=3),
+        ],
+        your_hand=[Card("K", "spades")],
+        trump_suit="hearts",
+        deck_size=36,
+        round_number=2,
+    )
+    base.update(kwargs)
+    return GameState(**base)
 
 
-class FakeReader:
-    """Returns a preset byte payload once, then EOF."""
+def _ready(client, *lines):
+    """Wire up loop, input queue and a fake writer with queued input."""
+    client._loop = asyncio.get_event_loop()
+    client._input_queue = asyncio.Queue()
+    for line in lines:
+        client._input_queue.put_nowait(line)
+    client._writer = FakeWriter()
+    client._drain_input = lambda: None  # keep pre-queued test input
 
-    def __init__(self, data=b""):
-        self._data = data
 
-    async def read(self, _n):
-        data, self._data = self._data, b""
-        return data
+def _last_sent(client):
+    """Decode the last framed message written to the fake writer."""
+    return decode_message(client._writer.sent.decode().strip())
 
 
 def test_defaults():
     client = GameClient()
     assert client.host == DEFAULT_HOST
     assert client.port == DEFAULT_PORT
+    assert client.player_id == -1
 
 
-def test_encode_roundtrip():
+def test_on_start_sets_player_id():
+    client = GameClient(player_name="Bob")
+    client._on_start({"players": [{"id": 0, "name": "Alice"}, {"id": 1, "name": "Bob"}]})
+    assert client.player_id == 1
+
+
+def test_dispatch_game_state_stores_state():
     client = GameClient()
-    data = client.encode(MSG_JOIN, {"name": "Alice"})
-    messages = client.feed(data)
-    assert messages == [(MSG_JOIN, {"name": "Alice"})]
+    client._prompting = True  # avoid clearing the screen via render_state
+    client._dispatch(MSG_GAME_STATE, _state().to_dict())
+    assert client.current_state is not None
+    assert client.current_state.round_number == 2
 
 
-def test_feed_handles_multiple_messages():
+def test_dispatch_error_prints(capsys):
     client = GameClient()
-    data = encode_message("A", 1) + encode_message("B", 2)
-    messages = client.feed(data)
-    assert messages == [("A", 1), ("B", 2)]
+    client._dispatch(MSG_ERROR, "boom")
+    assert "boom" in capsys.readouterr().out
 
 
-def test_feed_buffers_partial_message():
+def test_dispatch_timer_prints(capsys):
     client = GameClient()
-    data = encode_message("PING", "hello")
-    # Split the bytes mid-message: nothing complete yet.
-    assert client.feed(data[:5]) == []
-    # The rest arrives and the full message is decoded.
-    assert client.feed(data[5:]) == [("PING", "hello")]
+    client._dispatch(MSG_PLAY_CARD, {"action": "timer", "label": "Turn", "seconds_left": 5})
+    assert "Turn" in capsys.readouterr().out
 
 
-def test_join_sends_name():
+def test_on_round_end_prints(capsys):
     client = GameClient()
-    client._writer = FakeWriter()
-    asyncio.run(client.join("Alice"))
-    assert decode_message(client._writer.sent.decode().strip()) == (
-        MSG_JOIN,
-        {"name": "Alice"},
-    )
+    client._on_round_end({"roles": {"0": "King", "1": "Servant"}})
+    out = capsys.readouterr().out
+    assert "King" in out and "Servant" in out
 
 
-def test_receive_decodes_socket_data():
+def test_on_game_end_prints(capsys):
     client = GameClient()
-    client._reader = FakeReader(encode_message("PING", 1))
-    assert asyncio.run(client.receive()) == [("PING", 1)]
+    client._on_game_end({"final_roles": {"0": "Loser"}})
+    out = capsys.readouterr().out
+    assert "Loser" in out
 
 
-def test_receive_returns_empty_on_eof():
-    client = GameClient()
-    client._reader = FakeReader(b"")
-    assert asyncio.run(client.receive()) == []
+def test_send_encodes_message():
+    async def go():
+        client = GameClient()
+        client._writer = FakeWriter()
+        await client._send(MSG_DONE)
+        assert _last_sent(client)[0] == MSG_DONE
+
+    asyncio.run(go())
 
 
-def test_render_message_game_state():
-    state = GameState(
-        players=[PlayerInfo(player_id=0, name="Alice", role="King", hand_size=1)],
-        your_hand=[Card("K", "spades")],
-        trump_suit="hearts",
-        deck_size=36,
-        round_number=3,
-    )
-    out = render_message(MSG_GAME_STATE, state.to_dict())
-    assert out is not None
-    assert "Alice" in out and "3" in out
+def test_drain_input_empties_queue():
+    async def go():
+        client = GameClient()
+        client._input_queue = asyncio.Queue()
+        client._input_queue.put_nowait("stale")
+        client._drain_input()
+        assert client._input_queue.empty()
+
+    asyncio.run(go())
 
 
-def test_render_message_round_and_game_end():
-    assert render_message(MSG_ROUND_END, "winner") is not None
-    assert render_message(MSG_GAME_END, "done") is not None
+def test_read_line_returns_value():
+    async def go():
+        client = GameClient()
+        client._input_queue = asyncio.Queue()
+        client._input_queue.put_nowait("hi")
+        assert await client._read_line(1) == "hi"
+
+    asyncio.run(go())
 
 
-def test_render_message_error():
-    assert "boom" in render_message(MSG_ERROR, "boom")
+def test_read_line_timeout_returns_none():
+    async def go():
+        client = GameClient()
+        client._input_queue = asyncio.Queue()
+        assert await client._read_line(0.01) is None
+
+    asyncio.run(go())
 
 
-def test_render_message_unknown_returns_none():
-    assert render_message("SOMETHING_ELSE", {}) is None
+def test_prompt_loop_parses_valid():
+    async def go():
+        client = GameClient()
+        _ready(client, "bad", "ok")
+        result = await client._prompt_loop(
+            parse=lambda ln: ln if ln == "ok" else None,
+            on_timeout=lambda: "timeout",
+            invalid_msg="x",
+        )
+        assert result == "ok"
+
+    asyncio.run(go())
+
+
+def test_prompt_loop_times_out():
+    async def go():
+        client = GameClient()
+        _ready(client)
+        result = await client._prompt_loop(
+            parse=lambda ln: None,
+            on_timeout=lambda: "timeout",
+            invalid_msg="x",
+            timeout=0.01,
+        )
+        assert result == "timeout"
+
+    asyncio.run(go())
+
+
+def test_do_declare_trump_sends_suit():
+    async def go():
+        client = GameClient()
+        client.player_id = 0
+        client.current_state = _state(your_hand=[Card("K", "spades")])
+        _ready(client, "1")
+        await client._do_declare_trump()
+        assert _last_sent(client) == (MSG_DECLARE_TRUMP, {"suit": "spades"})
+
+    asyncio.run(go())
+
+
+def test_do_attack_pass_sends_done():
+    async def go():
+        client = GameClient()
+        client.player_id = 0
+        client.current_state = _state(your_hand=[Card("6", "spades")])
+        _ready(client, "0")
+        await client._do_attack()
+        assert _last_sent(client)[0] == MSG_DONE
+
+    asyncio.run(go())
+
+
+def test_do_attack_plays_card_sends_throw():
+    async def go():
+        client = GameClient()
+        client.player_id = 0
+        client.current_state = _state(your_hand=[Card("6", "spades")])
+        _ready(client, "1")
+        await client._do_attack()
+        assert _last_sent(client)[0] == MSG_THROW
+
+    asyncio.run(go())
+
+
+def test_do_defense_take_sends_take():
+    async def go():
+        client = GameClient()
+        client.player_id = 1
+        client.current_state = _state(
+            your_hand=[Card("K", "spades")],
+            table_attack=[Card("6", "spades")],
+        )
+        _ready(client, "0")
+        await client._do_defense()
+        assert _last_sent(client)[0] == MSG_TAKE
+
+    asyncio.run(go())
+
+
+def test_do_swap_offer_skip_sends_done():
+    async def go():
+        client = GameClient()
+        client.player_id = 0
+        client.current_state = _state()
+        _ready(client, "0")
+        await client._do_swap_offer()
+        assert _last_sent(client)[0] == MSG_DONE
+
+    asyncio.run(go())
