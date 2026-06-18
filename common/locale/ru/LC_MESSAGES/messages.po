@@ -20,7 +20,7 @@ msgid "Waiting for players..."
 msgstr "Ожидание игроков..."
 
 msgid "Connected. Waiting for players..."
-msgstr "Подключено. Ждём игроков..."
+msgstr "Подключено. Ожидание игроков..."
 
 msgid "Disconnected from server."
 msgstr "Соединение разорвано."
@@ -54,3 +54,185 @@ msgstr "Ваш ход: атака"
 
 msgid "Your defense turn"
 msgstr "Ваш ход: защита"
+
+# ---------------- UI DISPLAY (display.py) ----------------
+
+msgid "Players:"
+msgstr "Игроки:"
+
+msgid "Table:"
+msgstr "Стол:"
+
+msgid "Trump:"
+msgstr "Козырь:"
+
+msgid "Your hand"
+msgstr "Ваша рука"
+
+msgid "KING AND SERVANT"
+msgstr "КОРОЛЬ И СЛУГА"
+
+msgid "Round"
+msgstr "Раунд"
+
+msgid "<- YOU"
+msgstr "<- ВЫ"
+
+msgid "[out]"
+msgstr "[вышел]"
+
+msgid "<- open"
+msgstr "<- открыто"
+
+msgid "-"
+msgstr "-"
+
+msgid "YOU"
+msgstr "ВЫ"
+
+msgid "open"
+msgstr "открыто"
+
+msgid "not declared"
+msgstr "не объявлен"
+
+msgid "King"
+msgstr "Король"
+
+msgid "Ace"
+msgstr "Туз"
+
+msgid "Queen"
+msgstr "Дама"
+
+msgid "Servant"
+msgstr "Слуга"
+
+msgid "spades"
+msgstr "пики"
+
+msgid "hearts"
+msgstr "черви"
+
+msgid "diamonds"
+msgstr "бубны"
+
+msgid "clubs"
+msgstr "трефы"
+
+msgid "Game is full"
+msgstr "Игра уже заполнена"
+
+msgid "New round! Roles and hands have been dealt. The game starts in 10 seconds..."
+msgstr "Новый раунд! Роли и карты розданы. Игра начнется через 10 секунд..."
+
+msgid "Round start"
+msgstr "Начало раунда"
+
+msgid "King {name} is deciding whether to blindly swap hands. (60 sec)"
+msgstr "Король {name} решает, делать ли слепой обмен рукой. (60 сек)"
+
+msgid "King {name}: hand swap"
+msgstr "Король {name}: обмен рукой"
+
+msgid "King {king} blindly swapped hands with {target}!"
+msgstr "Король {king} вслепую обменялся рукой с {target}!"
+
+msgid "The exchange did not take place: {error}"
+msgstr "Обмен не состоялся: {error}"
+
+msgid "King {name} chose not to swap."
+msgstr "Король {name} решил не обмениваться."
+
+msgid "King {name} is choosing a trump suit from their cards. (60 sec)..."
+msgstr "Король {name} выбирает козырную масть из своих карт. (60 сек)..."
+
+msgid "King {name}: trump selection"
+msgstr "Король {name}: выбор козыря"
+
+msgid "Trump was selected automatically: {symbol} {suit}"
+msgstr "Козырь выбран автоматически: {symbol} {suit}"
+
+msgid "King {name} declared trump: {symbol} {suit}!"
+msgstr "Король {name} объявил козырь: {symbol} {suit}!"
+
+msgid "{name} declared BEAT. The table is cleared."
+msgstr "{name} объявил бито. Стол очищен."
+
+msgid "Attack: {attacker} ({attacker_role}) -> {defender} ({defender_role})"
+msgstr "Атака: {attacker} ({attacker_role}) -> {defender} ({defender_role})"
+
+msgid "{name}: you may throw in cards of the same ranks or declare beat"
+msgstr "{name}: можно подкинуть карты тех же рангов или объявить бито"
+
+msgid "Turn: {name}"
+msgstr "Ход: {name}"
+
+msgid "{name} puts on the table: {cards}"
+msgstr "{name} кладет на стол: {cards}"
+
+msgid "{name} is defending - {count} left to beat"
+msgstr "{name} защищается - осталось отбить: {count}"
+
+msgid "Defense: {name}"
+msgstr "Защита: {name}"
+
+msgid "{name} takes the cards!"
+msgstr "{name} забирает карты!"
+
+msgid "No cards selected"
+msgstr "Не выбрано ни одной карты"
+
+msgid "Player not found"
+msgstr "Игрок не найден"
+
+msgid "It is not your attack turn"
+msgstr "Сейчас не ваш ход атаки"
+
+msgid "You cannot select the same card twice"
+msgstr "Нельзя указывать одну карту дважды"
+
+msgid "Card {card} is not in your hand"
+msgstr "Карты {card} нет в вашей руке"
+
+msgid "Opening attack: all cards must have the same rank"
+msgstr "Первая атака: все карты должны быть одного ранга"
+
+msgid "Cannot throw in {card}: rank \"{rank}\" is not on the table"
+msgstr "Нельзя подкинуть {card}: ранга \"{rank}\" нет на столе"
+
+msgid "Maximum {max_cards} attack cards"
+msgstr "Максимум {max_cards} карт в атаке"
+
+msgid "The defender does not have enough cards to beat these"
+msgstr "У защитника не хватит карт, чтобы отбиться"
+
+msgid "It is not your defense turn"
+msgstr "Сейчас не ваша защита"
+
+msgid "Invalid table card number"
+msgstr "Неверный номер карты на столе"
+
+msgid "This card is already beaten"
+msgstr "Эта карта уже отбита"
+
+msgid "{card} does not beat {attack_card}"
+msgstr "{card} не бьет {attack_card}"
+
+msgid "Only the defender can take cards"
+msgstr "Забрать карты может только защищающийся"
+
+msgid "Not all cards are beaten yet"
+msgstr "Еще не все карты отбиты"
+
+msgid "The swap has already been used"
+msgstr "Обмен уже использован"
+
+msgid "Invalid player"
+msgstr "Неверный игрок"
+
+msgid "Only the King can swap hands"
+msgstr "Обмен доступен только Королю"
+
+msgid "The King cannot swap with himself"
+msgstr "Король не может меняться сам с собой"
